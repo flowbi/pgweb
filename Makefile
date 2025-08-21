@@ -3,8 +3,8 @@ GIT_COMMIT ?= $(shell git rev-parse --short=8 HEAD)
 BUILD_TIME ?= $(shell date -u +"%Y-%m-%dT%H:%M:%SZ" | tr -d '\n')
 GO_VERSION ?= $(shell go version | awk {'print $$3'})
 
-DOCKER_RELEASE_TAG = "sosedoff/pgweb:$(shell git describe --abbrev=0 --tags | sed 's/v//')"
-DOCKER_LATEST_TAG = "sosedoff/pgweb:latest"
+DOCKER_RELEASE_TAG = "flowbi/pgweb:$(shell git describe --abbrev=0 --tags | sed 's/v//')"
+DOCKER_LATEST_TAG = "flowbi/pgweb:latest"
 
 LDFLAGS = -s -w
 LDFLAGS += -X $(PKG)/pkg/command.GitCommit=$(GIT_COMMIT)
