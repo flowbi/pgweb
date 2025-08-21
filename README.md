@@ -45,7 +45,7 @@ Visit [WIKI](https://github.com/flowbi/pgweb/wiki) for more details.
 
 ## Demo
 
-Visit https://pgweb-demo.fly.dev/ to see Pgweb in action.
+Visit https://pgweb-demo.fly.dev/ to see the original Pgweb in action. Flow.BI is not maintaining a demo at this time.
 
 ## Installation
 
