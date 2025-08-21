@@ -4,6 +4,12 @@
   --pgweb-primary-text: #fff;
 }
 
+/* Tab hiding support */
+#nav ul li[style*="display: none"],
+#nav ul li[data-hidden="true"] {
+  display: none !important;
+}
+
 #main {
   display: none;
 }
