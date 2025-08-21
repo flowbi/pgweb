@@ -16,7 +16,9 @@ Very easy to use and packs just the right amount of features.
 
 Flow.BI is a generative AI service to integrate independent enterprise datasets. pgweb is used to provide a convenient graphical user interface to the SQL API inside the web application.
 
-To implement missing features, latest changes by the community, and to customize the application for better embedding in applications, it was decided to maintain a fork from the original author.
+To implement missing features, latest changes by the community, and to customize the application for better embedding in applications, it was decided to maintain a fork from the original author. Our development effort will focus on features required for the Flow.BI application. However, we are open to pull requests from the community and will add them to this fork.
+
+Our goal is to keep the original design principles by the original author, especially simplicity. In addition, we are going to support and maintain the original features, including the standalone availability of pgweb (the use of Flow.BI is not required) to maintain the highest value for the user community.
 
 [See application screenshots](SCREENS.md)
 
