@@ -43,6 +43,14 @@ Additional screenshots exist that show pgweb in standalone action:
 
 Visit [WIKI](https://github.com/flowbi/pgweb/wiki) for more details.
 
+## Additional Features not Supported by Original pgweb
+
+The following features have been added by Flow.BI to better support our use case:
+
+- Support for foreign tables.
+- SET ROLE after establishing the connection to support row-level security
+- Removing object groups without objects (Flow.BI is only using foreign tables in the SQL API and no tables or views).
+
 ## Demo
 
 Visit https://pgweb-demo.fly.dev/ to see the original Pgweb in action. Flow.BI is not maintaining a demo at this time.
