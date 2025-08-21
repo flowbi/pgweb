@@ -20,7 +20,13 @@ To implement missing features, latest changes by the community, and to customize
 
 Our goal is to keep the original design principles by the original author, especially simplicity. In addition, we are going to support and maintain the original features, including the standalone availability of pgweb (the use of Flow.BI is not required) to maintain the highest value for the user community.
 
-[See application screenshots](SCREENS.md)
+Our use case is to embed pgweb inside our Flow.BI user interface:
+
+<img width="1678" height="1058" alt="image" src="https://github.com/user-attachments/assets/26ed09f0-0229-429e-bc81-b67eef1e0475" />
+
+Additional screenshots exist that show pgweb in standalone action:
+
+[See original application screenshots](SCREENS.md)
 
 ## Features
 
