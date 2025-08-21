@@ -140,7 +140,8 @@ function buildSchemaSection(name, objects) {
     "view":              "Views",
     "materialized_view": "Materialized Views",
     "function":          "Functions",
-    "sequence":          "Sequences"
+    "sequence":          "Sequences",
+    "foreign_table":     "Foreign Tables"
   };
 
   var icons = {
@@ -148,7 +149,8 @@ function buildSchemaSection(name, objects) {
     "view":              '<i class="fa fa-table"></i>',
     "materialized_view": '<i class="fa fa-table"></i>',
     "function":          '<i class="fa fa-bolt"></i>',
-    "sequence":          '<i class="fa fa-circle-o"></i>'
+    "sequence":          '<i class="fa fa-circle-o"></i>',
+    "foreign_table":     '<i class="fa fa-table"></i>'
   };
 
   var klass = "";
@@ -158,7 +160,7 @@ function buildSchemaSection(name, objects) {
   section += "<div class='schema-name'><i class='fa fa-folder-o'></i><i class='fa fa-folder-open-o'></i> " + name + "</div>";
   section += "<div class='schema-container'>";
 
-  ["table", "view", "materialized_view", "function", "sequence"].forEach(function(group) {
+  ["table", "view", "materialized_view", "function", "sequence", "foreign_table"].forEach(function(group) {
     group_klass = "";
     if (name == "public" && group == "table") group_klass = "expanded";
 
@@ -222,7 +224,8 @@ function loadSchemas() {
       view: [],
       materialized_view: [],
       function: [],
-      sequence: []
+      sequence: [],
+      foreign_table: []
     }
   }
 
@@ -259,7 +262,7 @@ function loadSchemas() {
       autocompleteObjects = [];
       for (schema in data) {
         for (kind in data[schema]) {
-          if (!(kind == "table" || kind == "view" || kind == "materialized_view" || kind == "function")) {
+          if (!(kind == "table" || kind == "view" || kind == "materialized_view" || kind == "function" || kind == "foreign_table" )) {
             continue
           }
 
@@ -1399,6 +1402,19 @@ function bindContextMenus() {
           var table   = getQuotedSchemaTableName($(context[0]).data("id"));
           var action  = el.data("action");
           performViewAction(table, action, el);
+        }
+      });
+    }
+
+    if (group == "foreign_table") {
+      $(el).contextmenu({
+        target: "#tables_context_menu",
+        scopes: "li.schema-foreign-table",
+        onItem: function(context, e) {
+          var el      = $(e.target);
+          var table   = getQuotedSchemaTableName($(context[0]).data("id"));
+          var action  = el.data("action");
+          performTableAction(table, action, el);
         }
       });
     }
