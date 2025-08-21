@@ -22,6 +22,111 @@ var filterOptions = {
   "not_null":   "IS NOT NULL"
 };
 
+function getLuminance(hex) {
+  // Handle 3-digit hex colors
+  if (hex.length === 4) {
+    hex = hex.replace(/([^#])/g, '$1$1');
+  }
+  
+  var result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+  if (!result) return null;
+  
+  var r = parseInt(result[1], 16);
+  var g = parseInt(result[2], 16);
+  var b = parseInt(result[3], 16);
+
+  // Formula for perceived luminance
+  return (0.299 * r + 0.587 * g + 0.114 * b);
+}
+
+function hideNavigationTabs(tabsToHide) {
+  var tabMapping = {
+    'rows': 'table_content',
+    'structure': 'table_structure', 
+    'indexes': 'table_indexes',
+    'constraints': 'table_constraints',
+    'query': 'table_query',
+    'history': 'table_history',
+    'activity': 'table_activity',
+    'connection': 'table_connection'
+  };
+
+  var allTabs = Object.values(tabMapping);
+  var tabsToHideIds = [];
+
+  // Map friendly names to internal IDs
+  tabsToHide.forEach(function(tabName) {
+    var tabId = tabMapping[tabName.toLowerCase()];
+    if (tabId) {
+      tabsToHideIds.push(tabId);
+    }
+  });
+
+  // Ensure we don't hide all tabs - keep 'query' visible if all others are hidden
+  var visibleTabs = allTabs.filter(function(tabId) {
+    return tabsToHideIds.indexOf(tabId) === -1;
+  });
+
+  if (visibleTabs.length === 0) {
+    // Remove 'query' from hidden tabs to ensure at least one tab is visible
+    var queryIndex = tabsToHideIds.indexOf('table_query');
+    if (queryIndex > -1) {
+      tabsToHideIds.splice(queryIndex, 1);
+    }
+  }
+
+  // Hide the specified tabs
+  tabsToHideIds.forEach(function(tabId) {
+    var tabElement = document.getElementById(tabId);
+    if (tabElement) {
+      tabElement.style.display = 'none';
+      // Mark as hidden for future reference
+      tabElement.setAttribute('data-hidden', 'true');
+    }
+  });
+
+  // Store hidden tabs globally for event handler filtering
+  window.hiddenTabs = tabsToHideIds;
+}
+
+function isTabHidden(tabId) {
+  return window.hiddenTabs && window.hiddenTabs.indexOf(tabId) !== -1;
+}
+
+function initializeTheme() {
+  var urlParams = new URLSearchParams(window.location.search);
+  var primaryColor = urlParams.get('primaryColor');
+  
+  if (primaryColor) {
+    primaryColor = decodeURIComponent(primaryColor);
+    document.documentElement.style.setProperty('--pgweb-primary-color', primaryColor);
+    
+    var luminance = getLuminance(primaryColor);
+
+    if (luminance !== null) {
+      // Threshold can be adjusted, 128 is a common midpoint for 0-255 range
+      if (luminance < 128) {
+        // Dark background, use light text
+        document.documentElement.style.setProperty('--pgweb-primary-text', '#FFFFFF');
+        document.documentElement.style.setProperty('--pgweb-primary-text-muted', 'rgba(255, 255, 255, 0.85)');
+      } else {
+        // Light background, use dark text
+        document.documentElement.style.setProperty('--pgweb-primary-text', '#000000');
+        document.documentElement.style.setProperty('--pgweb-primary-text-muted', 'rgba(0, 0, 0, 0.6)');
+      }
+    }
+  }
+
+  // Handle tab visibility configuration
+  var hideTabs = urlParams.get('hideTabs');
+  if (hideTabs) {
+    var tabsToHide = hideTabs.split(',').map(function(tab) {
+      return tab.trim();
+    });
+    hideNavigationTabs(tabsToHide);
+  }
+}
+
 function getSessionId() {
   var id = sessionStorage.getItem("session_id");
 
@@ -1549,17 +1654,37 @@ function bindContentModalEvents() {
 }
 
 $(document).ready(function() {
+  // Initialize theme from URL parameters
+  initializeTheme();
+  
   bindInputResizeEvents();
   bindContentModalEvents();
 
-  $("#table_content").on("click",     function() { showTableContent();     });
-  $("#table_structure").on("click",   function() { showTableStructure();   });
-  $("#table_indexes").on("click",     function() { showTableIndexes();     });
-  $("#table_constraints").on("click", function() { showTableConstraints(); });
-  $("#table_history").on("click",     function() { showQueryHistory();     });
-  $("#table_query").on("click",       function() { showQueryPanel();       });
-  $("#table_connection").on("click",  function() { showConnectionPanel();  });
-  $("#table_activity").on("click",    function() { showActivityPanel();    });
+  // Bind event handlers only for visible tabs
+  if (!isTabHidden("table_content")) {
+    $("#table_content").on("click", function() { showTableContent(); });
+  }
+  if (!isTabHidden("table_structure")) {
+    $("#table_structure").on("click", function() { showTableStructure(); });
+  }
+  if (!isTabHidden("table_indexes")) {
+    $("#table_indexes").on("click", function() { showTableIndexes(); });
+  }
+  if (!isTabHidden("table_constraints")) {
+    $("#table_constraints").on("click", function() { showTableConstraints(); });
+  }
+  if (!isTabHidden("table_history")) {
+    $("#table_history").on("click", function() { showQueryHistory(); });
+  }
+  if (!isTabHidden("table_query")) {
+    $("#table_query").on("click", function() { showQueryPanel(); });
+  }
+  if (!isTabHidden("table_connection")) {
+    $("#table_connection").on("click", function() { showConnectionPanel(); });
+  }
+  if (!isTabHidden("table_activity")) {
+    $("#table_activity").on("click", function() { showActivityPanel(); });
+  }
 
   $("#run").on("click", function() {
     runQuery();
