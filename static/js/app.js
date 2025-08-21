@@ -161,25 +161,27 @@ function buildSchemaSection(name, objects) {
   section += "<div class='schema-container'>";
 
   ["table", "view", "materialized_view", "function", "sequence", "foreign_table"].forEach(function(group) {
-    group_klass = "";
-    if (name == "public" && group == "table") group_klass = "expanded";
+    if (objects[group].length > 0) {
+      group_klass = "";
+      if (name == "public" && group == "table") group_klass = "expanded";
 
-    section += "<div class='schema-group " + group_klass + "'>";
-    section += "<div class='schema-group-title'><i class='fa fa-chevron-right'></i><i class='fa fa-chevron-down'></i> " + titles[group] + " <span class='schema-group-count'>" + objects[group].length + "</span></div>";
-    section += "<ul data-group='" + group + "'>";
+      section += "<div class='schema-group " + group_klass + "'>";
+      section += "<div class='schema-group-title'><i class='fa fa-chevron-right'></i><i class='fa fa-chevron-down'></i> " + titles[group] + " <span class='schema-group-count'>" + objects[group].length + "</span></div>";
+      section += "<ul data-group='" + group + "'>";
 
-    if (objects[group]) {
-      objects[group].forEach(function(item) {
-        var id = name + "." + item.name;
+      if (objects[group]) {
+        objects[group].forEach(function (item) {
+          var id = name + "." + item.name;
 
-        // Use function OID since multiple functions with the same name might exist
-        if (group == "function") {
-          id = item.oid;
-        }
+          // Use function OID since multiple functions with the same name might exist
+          if (group == "function") {
+            id = item.oid;
+          }
 
-        section += "<li class='schema-item schema-" + group + "' data-type='" + group + "' data-id='" + id + "' data-name='" + item.name + "'>" + icons[group] + "&nbsp;" + item.name + "</li>";
-      });
-      section += "</ul></div>";
+          section += "<li class='schema-item schema-" + group + "' data-type='" + group + "' data-id='" + id + "' data-name='" + item.name + "'>" + icons[group] + "&nbsp;" + item.name + "</li>";
+        });
+        section += "</ul></div>";
+      }
     }
   });
 
