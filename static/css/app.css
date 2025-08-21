@@ -1,3 +1,9 @@
+:root {
+  --pgweb-primary-color: #79589f;
+  --pgweb-primary-text-muted: #d6cce2;
+  --pgweb-primary-text: #fff;
+}
+
 #main {
   display: none;
 }
@@ -8,7 +14,7 @@
   left: 250px;
   right: 0;
   height: 50px;
-  background: #79589f;
+  background: var(--pgweb-primary-color);
 }
 
 #nav ul {
@@ -26,7 +32,7 @@
   line-height: 49px;
   font-size: 13px;
   padding: 0px 14px;
-  color: #d6cce2;
+  color: var(--pgweb-primary-text-muted);
   font-weight: 500;
   margin: 0 1px;
   cursor: pointer;
@@ -40,7 +46,7 @@
 }
 
 #nav ul li:hover {
-  color: #fff;
+  color: var(--pgweb-primary-text);
 }
 
 #nav ul li.selected {
@@ -83,8 +89,8 @@
   line-height: 50px;
   font-weight: bold;
   font-size: 14px;
-  color: #fff;
-  background: #79589f;
+  color: var(--pgweb-primary-text);
+  background: var(--pgweb-primary-color);
   z-index: 900;
 }
 
@@ -122,10 +128,10 @@
 
 #sidebar .current-database input.typeahead {
   display: none;
-  background: #79589f;
+  background: var(--pgweb-primary-color);
   width: 200px;
   height: 22px;
-  color: #fff;
+  color: var(--pgweb-primary-text);
   font-weight: normal;
   outline: none;
   border: 0px none;
@@ -145,7 +151,7 @@
 }
 
 #sidebar .current-database input.typeahead::-webkit-input-placeholder {
-  color: #fff;
+  color: var(--pgweb-primary-text);
 }
 
 #sidebar ul.typeahead {
@@ -718,9 +724,9 @@
 }
 
 #edit_connection, #close_connection {
-  background: #79589f;
-  color: #fff;
-  border-color: #fff;
+  background: var(--pgweb-primary-color);
+  color: var(--pgweb-primary-text);
+  border-color: var(--pgweb-primary-text);
 }
 
 #edit_connection i {

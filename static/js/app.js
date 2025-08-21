@@ -22,6 +22,48 @@ var filterOptions = {
   "not_null":   "IS NOT NULL"
 };
 
+function getLuminance(hex) {
+  // Handle 3-digit hex colors
+  if (hex.length === 4) {
+    hex = hex.replace(/([^#])/g, '$1$1');
+  }
+  
+  var result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+  if (!result) return null;
+  
+  var r = parseInt(result[1], 16);
+  var g = parseInt(result[2], 16);
+  var b = parseInt(result[3], 16);
+
+  // Formula for perceived luminance
+  return (0.299 * r + 0.587 * g + 0.114 * b);
+}
+
+function initializeTheme() {
+  var urlParams = new URLSearchParams(window.location.search);
+  var primaryColor = urlParams.get('primaryColor');
+  
+  if (primaryColor) {
+    primaryColor = decodeURIComponent(primaryColor);
+    document.documentElement.style.setProperty('--pgweb-primary-color', primaryColor);
+    
+    var luminance = getLuminance(primaryColor);
+
+    if (luminance !== null) {
+      // Threshold can be adjusted, 128 is a common midpoint for 0-255 range
+      if (luminance < 128) {
+        // Dark background, use light text
+        document.documentElement.style.setProperty('--pgweb-primary-text', '#FFFFFF');
+        document.documentElement.style.setProperty('--pgweb-primary-text-muted', 'rgba(255, 255, 255, 0.85)');
+      } else {
+        // Light background, use dark text
+        document.documentElement.style.setProperty('--pgweb-primary-text', '#000000');
+        document.documentElement.style.setProperty('--pgweb-primary-text-muted', 'rgba(0, 0, 0, 0.6)');
+      }
+    }
+  }
+}
+
 function getSessionId() {
   var id = sessionStorage.getItem("session_id");
 
@@ -1549,6 +1591,9 @@ function bindContentModalEvents() {
 }
 
 $(document).ready(function() {
+  // Initialize theme from URL parameters
+  initializeTheme();
+  
   bindInputResizeEvents();
   bindContentModalEvents();
 
