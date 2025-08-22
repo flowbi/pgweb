@@ -1,4 +1,4 @@
-PKG = github.com/sosedoff/pgweb
+PKG = github.com/flowbi/pgweb
 GIT_COMMIT ?= $(shell git rev-parse --short=8 HEAD)
 BUILD_TIME ?= $(shell date -u +"%Y-%m-%dT%H:%M:%SZ" | tr -d '\n')
 GO_VERSION ?= $(shell go version | awk {'print $$3'})

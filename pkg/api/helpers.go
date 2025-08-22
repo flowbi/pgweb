@@ -11,7 +11,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"github.com/sosedoff/pgweb/pkg/shared"
+	"github.com/flowbi/pgweb/pkg/shared"
 )
 
 var (

@@ -14,14 +14,14 @@ import (
 	"github.com/jessevdk/go-flags"
 	"github.com/sirupsen/logrus"
 
-	"github.com/sosedoff/pgweb/pkg/api"
-	"github.com/sosedoff/pgweb/pkg/bookmarks"
-	"github.com/sosedoff/pgweb/pkg/client"
-	"github.com/sosedoff/pgweb/pkg/command"
-	"github.com/sosedoff/pgweb/pkg/connection"
-	"github.com/sosedoff/pgweb/pkg/metrics"
-	"github.com/sosedoff/pgweb/pkg/queries"
-	"github.com/sosedoff/pgweb/pkg/util"
+	"github.com/flowbi/pgweb/pkg/api"
+	"github.com/flowbi/pgweb/pkg/bookmarks"
+	"github.com/flowbi/pgweb/pkg/client"
+	"github.com/flowbi/pgweb/pkg/command"
+	"github.com/flowbi/pgweb/pkg/connection"
+	"github.com/flowbi/pgweb/pkg/metrics"
+	"github.com/flowbi/pgweb/pkg/queries"
+	"github.com/flowbi/pgweb/pkg/util"
 )
 
 var (

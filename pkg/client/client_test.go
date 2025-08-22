@@ -14,7 +14,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/sosedoff/pgweb/pkg/command"
+	"github.com/flowbi/pgweb/pkg/command"
 )
 
 var (

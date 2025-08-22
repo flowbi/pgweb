@@ -1210,7 +1210,7 @@ function addShortcutTooltips() {
 // Get the latest release from Github API
 function getLatestReleaseInfo(current) {
   try {
-    $.get("https://api.github.com/repos/sosedoff/pgweb/releases/latest", function(release) {
+    $.get("https://api.github.com/repos/flowbi/pgweb/releases/latest", function(release) {
       if (release.name != current.version) {
         var message = "Update available. Check out " + release.tag_name + " on <a target='_blank' href='" + release.html_url + "'>Github</a>";
         $(".connection-settings .update").html(message).fadeIn();

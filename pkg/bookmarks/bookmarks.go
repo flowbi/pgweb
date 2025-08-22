@@ -3,8 +3,8 @@ package bookmarks
 import (
 	"os"
 
-	"github.com/sosedoff/pgweb/pkg/command"
-	"github.com/sosedoff/pgweb/pkg/shared"
+	"github.com/flowbi/pgweb/pkg/command"
+	"github.com/flowbi/pgweb/pkg/shared"
 )
 
 // Bookmark contains information about bookmarked database connection

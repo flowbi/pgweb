@@ -10,7 +10,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/sosedoff/pgweb/pkg/command"
+	"github.com/flowbi/pgweb/pkg/command"
 )
 
 const (
