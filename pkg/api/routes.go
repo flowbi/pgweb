@@ -13,6 +13,7 @@ func SetupMiddlewares(group *gin.RouterGroup) {
 	}
 
 	group.Use(dbCheckMiddleware())
+	group.Use(roleInjectionMiddleware())  // Add role injection after db check
 }
 
 func SetupRoutes(router *gin.Engine) {

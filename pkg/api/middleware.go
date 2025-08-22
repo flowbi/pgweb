@@ -1,6 +1,7 @@
 package api
 
 import (
+	"log"
 	"strings"
 
 	"github.com/gin-gonic/gin"
@@ -54,6 +55,29 @@ func corsMiddleware() gin.HandlerFunc {
 		c.Header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
 		c.Header("Access-Control-Expose-Headers", "*")
 		c.Header("Access-Control-Allow-Origin", command.Opts.CorsOrigin)
+	}
+}
+
+// Middleware to extract X-Database-Role header and set role on client
+func roleInjectionMiddleware() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		// Extract X-Database-Role header
+		role := c.GetHeader("X-Database-Role")
+		
+		if role != "" {
+			// Get the current database client
+			client := DB(c)
+			if client != nil {
+				// Set the role on the client for this request
+				client.SetRole(role)
+				
+				if command.Opts.Debug {
+					log.Printf("SET ROLE middleware: role=%s, path=%s", role, c.Request.URL.Path)
+				}
+			}
+		}
+		
+		c.Next()
 	}
 }
 
