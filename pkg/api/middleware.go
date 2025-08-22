@@ -63,20 +63,20 @@ func roleInjectionMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// Extract X-Database-Role header
 		role := c.GetHeader("X-Database-Role")
-		
+
 		if role != "" {
 			// Get the current database client
 			client := DB(c)
 			if client != nil {
 				// Set the role on the client for this request
 				client.SetRole(role)
-				
+
 				if command.Opts.Debug {
 					log.Printf("SET ROLE middleware: role=%s, path=%s", role, c.Request.URL.Path)
 				}
 			}
 		}
-		
+
 		c.Next()
 	}
 }
