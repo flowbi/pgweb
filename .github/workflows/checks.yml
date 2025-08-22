@@ -16,7 +16,6 @@ on:
 
 env:
   GO_VERSION: "1.22"
-  CGO_ENABLED: 0
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -123,6 +122,8 @@ jobs:
     timeout-minutes: 30
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     needs: [tests, lint, fmt]
+    env:
+      CGO_ENABLED: 0
 
     steps:
       - name: Checkout code
