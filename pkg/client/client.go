@@ -43,6 +43,7 @@ type Client struct {
 	queryTimeout     time.Duration
 	readonly         bool
 	closed           bool
+	defaultRole      string           // Role from X-Database-Role header
 	External         bool             `json:"external"`
 	History          []history.Record `json:"history"`
 	ConnectionString string           `json:"connection_string"`
@@ -446,6 +447,15 @@ func (client *Client) context() (context.Context, context.CancelFunc) {
 }
 
 func (client *Client) exec(query string, args ...interface{}) (*Result, error) {
+	// Inject SET ROLE if specified via X-Database-Role header
+	if client.defaultRole != "" {
+		// Prepend SET ROLE to the query for tenant isolation with proper escaping
+		query = fmt.Sprintf(`SET ROLE "%s"; %s`, client.defaultRole, query)
+		if command.Opts.Debug {
+			log.Printf("Role injection (exec): SET ROLE %s", client.defaultRole)
+		}
+	}
+
 	ctx, cancel := client.context()
 	defer cancel()
 
@@ -487,6 +497,15 @@ func (client *Client) query(query string, args ...interface{}) (*Result, error) 
 	defer func() {
 		client.lastQueryTime = time.Now().UTC()
 	}()
+
+	// Inject SET ROLE if specified via X-Database-Role header
+	if client.defaultRole != "" {
+		// Prepend SET ROLE to the query for tenant isolation with proper escaping
+		query = fmt.Sprintf(`SET ROLE "%s"; %s`, client.defaultRole, query)
+		if command.Opts.Debug {
+			log.Printf("Role injection: SET ROLE %s", client.defaultRole)
+		}
+	}
 
 	// We're going to force-set transaction mode on every query.
 	// This is needed so that default mode could not be changed by user.
@@ -653,6 +672,22 @@ func (c ConnContext) String() string {
 }
 
 // ConnContext returns information about current database connection
+// SetRole sets the database role for the client from X-Database-Role header
+func (client *Client) SetRole(role string) {
+	// Validate role name to prevent injection attacks
+	if role != "" && isValidRoleName(role) {
+		client.defaultRole = role
+	}
+}
+
+// isValidRoleName validates that the role name matches expected pattern
+func isValidRoleName(role string) bool {
+	// Allow alphanumeric characters, underscores, and typical user patterns
+	// This matches the user_12345 pattern mentioned in requirements
+	match, _ := regexp.MatchString(`^[a-zA-Z][a-zA-Z0-9_]*$`, role)
+	return match && len(role) <= 64 // reasonable length limit
+}
+
 func (client *Client) GetConnContext() (*ConnContext, error) {
 	url, err := neturl.Parse(client.ConnectionString)
 	if err != nil {
