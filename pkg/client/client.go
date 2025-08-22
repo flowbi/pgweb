@@ -14,12 +14,12 @@ import (
 	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq"
 
-	"github.com/sosedoff/pgweb/pkg/bookmarks"
-	"github.com/sosedoff/pgweb/pkg/command"
-	"github.com/sosedoff/pgweb/pkg/connection"
-	"github.com/sosedoff/pgweb/pkg/history"
-	"github.com/sosedoff/pgweb/pkg/shared"
-	"github.com/sosedoff/pgweb/pkg/statements"
+	"github.com/flowbi/pgweb/pkg/bookmarks"
+	"github.com/flowbi/pgweb/pkg/command"
+	"github.com/flowbi/pgweb/pkg/connection"
+	"github.com/flowbi/pgweb/pkg/history"
+	"github.com/flowbi/pgweb/pkg/shared"
+	"github.com/flowbi/pgweb/pkg/statements"
 )
 
 var (

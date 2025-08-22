@@ -9,9 +9,9 @@ mkdir -p ./tmp
 rm -rf ./tmp/*
 
 # Fetch the latest published version
-curl -s https://api.github.com/repos/sosedoff/pgweb/releases/latest > $RELEASE_FILE
+curl -s https://api.github.com/repos/flowbi/pgweb/releases/latest > $RELEASE_FILE
 VERSION="$(jq -r .tag_name < $RELEASE_FILE)"
-URL="https://github.com/sosedoff/pgweb/archive/$VERSION.tar.gz"
+URL="https://github.com/flowbi/pgweb/archive/$VERSION.tar.gz"
 URL_SHA256=$(wget -qO- $URL | shasum -a 256 | cut -d ' ' -f 1)
 
 # Reset any changes

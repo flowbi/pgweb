@@ -1,6 +1,28 @@
 ## Changelog
 
-Current [release](https://github.com/sosedoff/pgweb/releases) is `0.16.2`.
+Current [release](https://github.com/flowbi/pgweb/releases) is `0.16.5`.
+
+## 0.16.5 - 2025-08-22
+
+- `NEW` Implement role injection middleware for database access - supports multitenancy via X-Database-Role header
+- `FIX` Fix formatting issues in codebase
+
+## 0.16.4 - 2025-08-21
+
+- `NEW` Add tab hiding functionality via URL parameters for customized UI embedding
+- `NEW` Native support for colors passed through query parameters for company branding
+- `NEW` Added CSS custom properties/variables for theming (--pgweb-primary-color, --pgweb-primary-text, --pgweb-primary-text-muted)
+- `FIX` Replaced hardcoded colors throughout the CSS for better theme support
+
+## 0.16.3 - 2024-11-02
+
+- `NEW` Added support for foreign tables in database object listing
+- `NEW` Hide empty object groups from sidebar for cleaner UI
+- `NEW` Limit activity tab to show current user queries only for better security
+- `NEW` Add server settings view functionality
+- `FIX` Update Docker repository references to flowbi/pgweb
+- `FIX` Fix typos in documentation and code
+- `FIX` Add execution time display for empty queries
 
 ## 0.16.2 - 2024-11-02
 

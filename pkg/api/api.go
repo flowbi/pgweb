@@ -12,14 +12,14 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/tuvistavie/securerandom"
 
-	"github.com/sosedoff/pgweb/pkg/bookmarks"
-	"github.com/sosedoff/pgweb/pkg/client"
-	"github.com/sosedoff/pgweb/pkg/command"
-	"github.com/sosedoff/pgweb/pkg/connection"
-	"github.com/sosedoff/pgweb/pkg/metrics"
-	"github.com/sosedoff/pgweb/pkg/queries"
-	"github.com/sosedoff/pgweb/pkg/shared"
-	"github.com/sosedoff/pgweb/static"
+	"github.com/flowbi/pgweb/pkg/bookmarks"
+	"github.com/flowbi/pgweb/pkg/client"
+	"github.com/flowbi/pgweb/pkg/command"
+	"github.com/flowbi/pgweb/pkg/connection"
+	"github.com/flowbi/pgweb/pkg/metrics"
+	"github.com/flowbi/pgweb/pkg/queries"
+	"github.com/flowbi/pgweb/pkg/shared"
+	"github.com/flowbi/pgweb/static"
 )
 
 var (
