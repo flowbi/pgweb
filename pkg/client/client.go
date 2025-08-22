@@ -447,17 +447,20 @@ func (client *Client) context() (context.Context, context.CancelFunc) {
 }
 
 func (client *Client) exec(query string, args ...interface{}) (*Result, error) {
-	// Inject SET ROLE if specified via X-Database-Role header
+	ctx, cancel := client.context()
+	defer cancel()
+
+	// Execute SET ROLE as a separate command if specified via X-Database-Role header
 	if client.defaultRole != "" {
-		// Prepend SET ROLE to the query for tenant isolation with proper escaping
-		query = fmt.Sprintf(`SET ROLE "%s"; %s`, client.defaultRole, query)
+		setRoleQuery := fmt.Sprintf(`SET ROLE "%s"`, client.defaultRole)
 		if command.Opts.Debug {
 			log.Printf("Role injection (exec): SET ROLE %s", client.defaultRole)
 		}
+		_, err := client.db.ExecContext(ctx, setRoleQuery)
+		if err != nil {
+			return nil, fmt.Errorf("failed to set role %s: %w", client.defaultRole, err)
+		}
 	}
-
-	ctx, cancel := client.context()
-	defer cancel()
 
 	queryStart := time.Now()
 	res, err := client.db.ExecContext(ctx, query, args...)
@@ -498,12 +501,17 @@ func (client *Client) query(query string, args ...interface{}) (*Result, error) 
 		client.lastQueryTime = time.Now().UTC()
 	}()
 
-	// Inject SET ROLE if specified via X-Database-Role header
+	// Execute SET ROLE as a separate command if specified via X-Database-Role header
 	if client.defaultRole != "" {
-		// Prepend SET ROLE to the query for tenant isolation with proper escaping
-		query = fmt.Sprintf(`SET ROLE "%s"; %s`, client.defaultRole, query)
+		setRoleQuery := fmt.Sprintf(`SET ROLE "%s"`, client.defaultRole)
 		if command.Opts.Debug {
 			log.Printf("Role injection: SET ROLE %s", client.defaultRole)
+		}
+		ctx, cancel := client.context()
+		_, err := client.db.ExecContext(ctx, setRoleQuery)
+		cancel()
+		if err != nil {
+			return nil, fmt.Errorf("failed to set role %s: %w", client.defaultRole, err)
 		}
 	}
 
