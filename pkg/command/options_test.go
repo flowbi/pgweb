@@ -94,4 +94,20 @@ func TestParseOptions(t *testing.T) {
 		_, err = ParseOptions([]string{"--bookmarks-only", "--connect-backend", "test", "--sessions", "--connect-token", "token", "--url", "127.0.0.2"})
 		assert.EqualError(t, err, "--connect-backend not supported in bookmarks-only mode")
 	})
+
+	t.Run("hide filters", func(t *testing.T) {
+		opts, err := ParseOptions([]string{"--hide-schemas", "public,meta"})
+		assert.NoError(t, err)
+		assert.Equal(t, "public,meta", opts.HideSchemas)
+
+		opts, err = ParseOptions([]string{"--hide-objects", "^temp_,_backup$"})
+		assert.NoError(t, err)
+		assert.Equal(t, "^temp_,_backup$", opts.HideObjects)
+
+		// Test both filters together
+		opts, err = ParseOptions([]string{"--hide-schemas", "public", "--hide-objects", "temp"})
+		assert.NoError(t, err)
+		assert.Equal(t, "public", opts.HideSchemas)
+		assert.Equal(t, "temp", opts.HideObjects)
+	})
 }

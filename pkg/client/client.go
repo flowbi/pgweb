@@ -34,6 +34,103 @@ var (
 	ErrDatabaseNotExist  = errors.New("database does not exist")
 )
 
+// CompileRegexPatterns compiles comma-separated regex patterns into compiled regexes
+func CompileRegexPatterns(patterns string) ([]*regexp.Regexp, error) {
+	if patterns == "" {
+		return nil, nil
+	}
+
+	patternList := strings.Split(patterns, ",")
+	regexes := make([]*regexp.Regexp, 0, len(patternList))
+
+	for _, pattern := range patternList {
+		pattern = strings.TrimSpace(pattern)
+		if pattern == "" {
+			continue
+		}
+
+		regex, err := regexp.Compile(pattern)
+		if err != nil {
+			return nil, fmt.Errorf("invalid regex pattern '%s': %v", pattern, err)
+		}
+		regexes = append(regexes, regex)
+	}
+
+	return regexes, nil
+}
+
+// shouldHideItem checks if an item matches any of the hiding patterns
+func shouldHideItem(item string, patterns []*regexp.Regexp) bool {
+	for _, pattern := range patterns {
+		if pattern.MatchString(item) {
+			return true
+		}
+	}
+	return false
+}
+
+// FilterStringSlice removes strings that match any of the hiding patterns
+func FilterStringSlice(items []string, patterns []*regexp.Regexp) []string {
+	if len(patterns) == 0 {
+		return items
+	}
+
+	filtered := make([]string, 0, len(items))
+	for _, item := range items {
+		if !shouldHideItem(item, patterns) {
+			filtered = append(filtered, item)
+		}
+	}
+	return filtered
+}
+
+// filterObjectsResult filters objects based on schema and object name patterns
+func filterObjectsResult(result *Result, schemaPatterns []*regexp.Regexp, objectPatterns []*regexp.Regexp) *Result {
+	if len(schemaPatterns) == 0 && len(objectPatterns) == 0 {
+		return result
+	}
+
+	// Objects query returns columns: oid, schema, name, type, owner, comment
+	// We need to filter based on schema (column 1) and name (column 2)
+	filteredRows := make([]Row, 0, len(result.Rows))
+
+	for _, row := range result.Rows {
+		if len(row) < 3 {
+			continue // Skip malformed rows
+		}
+
+		schema, ok := row[1].(string)
+		if !ok {
+			continue // Skip rows where schema is not a string
+		}
+
+		name, ok := row[2].(string)
+		if !ok {
+			continue // Skip rows where name is not a string
+		}
+
+		// Check if schema should be hidden
+		if shouldHideItem(schema, schemaPatterns) {
+			continue
+		}
+
+		// Check if object name should be hidden
+		if shouldHideItem(name, objectPatterns) {
+			continue
+		}
+
+		filteredRows = append(filteredRows, row)
+	}
+
+	// Return new result with filtered rows
+	return &Result{
+		Columns:    result.Columns,
+		Rows:       filteredRows,
+		Pagination: result.Pagination,
+		Stats:      result.Stats,
+	}
+}
+
 type Client struct {
 	db               *sqlx.DB
 	tunnel           *Tunnel
@@ -270,11 +367,39 @@ func (client *Client) Databases() ([]string, error) {
 }
 
 func (client *Client) Schemas() ([]string, error) {
-	return client.fetchRows(statements.Schemas)
+	schemas, err := client.fetchRows(statements.Schemas)
+	if err != nil {
+		return nil, err
+	}
+
+	// Apply schema filtering if configured
+	patterns, err := CompileRegexPatterns(command.Opts.HideSchemas)
+	if err != nil {
+		return nil, fmt.Errorf("failed to compile schema hide patterns: %v", err)
+	}
+
+	return FilterStringSlice(schemas, patterns), nil
 }
 
 func (client *Client) Objects() (*Result, error) {
-	return client.query(statements.Objects)
+	result, err := client.query(statements.Objects)
+	if err != nil {
+		return nil, err
+	}
+
+	// Apply schema filtering if configured
+	schemaPatterns, err := CompileRegexPatterns(command.Opts.HideSchemas)
+	if err != nil {
+		return nil, fmt.Errorf("failed to compile schema hide patterns: %v", err)
+	}
+
+	// Apply object filtering if configured
+	objectPatterns, err := CompileRegexPatterns(command.Opts.HideObjects)
+	if err != nil {
+		return nil, fmt.Errorf("failed to compile object hide patterns: %v", err)
+	}
+
+	return filterObjectsResult(result, schemaPatterns, objectPatterns), nil
 }
 
 func (client *Client) Table(table string) (*Result, error) {
@@ -330,7 +455,55 @@ func (client *Client) EstimatedTableRowsCount(table string, opts RowsOptions) (*
 	return result, nil
 }
 
+// isForeignTable checks if the given table is a foreign table by querying pg_class
+func (client *Client) isForeignTable(schema, tableName string) (bool, error) {
+	query := `SELECT c.relkind = 'f' as is_foreign 
+			  FROM pg_catalog.pg_class c 
+			  LEFT JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace 
+			  WHERE c.relname = $1 AND n.nspname = $2`
+
+	result, err := client.query(query, tableName, schema)
+	if err != nil {
+		return false, err
+	}
+
+	if len(result.Rows) == 0 {
+		return false, nil
+	}
+
+	isForeign, ok := result.Rows[0][0].(bool)
+	if !ok {
+		return false, fmt.Errorf("unexpected type for is_foreign result")
+	}
+
+	return isForeign, nil
+}
+
 func (client *Client) TableRowsCount(table string, opts RowsOptions) (*Result, error) {
+	schema, tableName := getSchemaAndTable(table)
+
+	// Check if this is a foreign table
+	isForeign, err := client.isForeignTable(schema, tableName)
+	if err != nil {
+		// If we can't determine if it's foreign, log the error but proceed with normal count
+		if command.Opts.Debug {
+			log.Printf("Warning: Could not determine if table %s.%s is foreign: %v", schema, tableName, err)
+		}
+	}
+
+	// For foreign tables, avoid COUNT queries as they can timeout due to network latency
+	if isForeign {
+		// Return a default large number to indicate "many rows" without doing expensive COUNT
+		// This prevents pagination timeouts while still allowing the table to be browsed
+		result := &Result{
+			Columns: []string{"count"},
+			Rows: []Row{
+				{int64(-1)}, // Use -1 to indicate unknown count for foreign tables
+			},
+		}
+		return result, nil
+	}
+
 	// Return postgres estimated rows count on empty filter
 	if opts.Where == "" && client.serverType == postgresType {
 		res, err := client.EstimatedTableRowsCount(table, opts)
@@ -343,7 +516,6 @@ func (client *Client) TableRowsCount(table string, opts RowsOptions) (*Result, e
 		}
 	}
 
-	schema, tableName := getSchemaAndTable(table)
 	sql := fmt.Sprintf(`SELECT COUNT(1) FROM "%s"."%s"`, schema, tableName)
 
 	if opts.Where != "" {
@@ -357,8 +529,30 @@ func (client *Client) TableInfo(table string) (*Result, error) {
 	if client.serverType == cockroachType {
 		return client.query(statements.TableInfoCockroach)
 	}
-	schema, table := getSchemaAndTable(table)
-	return client.query(statements.TableInfo, fmt.Sprintf(`"%s"."%s"`, schema, table))
+
+	schema, tableName := getSchemaAndTable(table)
+
+	// Check if this is a foreign table
+	isForeign, err := client.isForeignTable(schema, tableName)
+	if err != nil {
+		// If we can't determine if it's foreign, log the error but proceed with normal info
+		if command.Opts.Debug {
+			log.Printf("Warning: Could not determine if table %s.%s is foreign: %v", schema, tableName, err)
+		}
+	}
+
+	// For foreign tables, return a minimal response indicating they're foreign
+	if isForeign {
+		result := &Result{
+			Columns: []string{"data_size", "index_size", "total_size", "rows_count", "is_foreign_table"},
+			Rows: []Row{
+				{"N/A", "N/A", "N/A", "Unknown", true},
+			},
+		}
+		return result, nil
+	}
+
+	return client.query(statements.TableInfo, fmt.Sprintf(`"%s"."%s"`, schema, tableName))
 }
 
 func (client *Client) TableIndexes(table string) (*Result, error) {

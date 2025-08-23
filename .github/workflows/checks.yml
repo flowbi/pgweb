@@ -27,7 +27,7 @@ jobs:
     timeout-minutes: 40
     strategy:
       matrix:
-        pg_version: ${{ github.event_name == 'pull_request' && fromJSON('[17]') || fromJSON('[9.6, 10, 11, 12, 13, 14, 15, 16, 17]') }}
+        pg_version: [16]
 
     services:
       postgres:

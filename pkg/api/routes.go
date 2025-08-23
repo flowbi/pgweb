@@ -12,6 +12,7 @@ func SetupMiddlewares(group *gin.RouterGroup) {
 		group.Use(corsMiddleware())
 	}
 
+	group.Use(errorHandlingMiddleware()) // Add error handling first
 	group.Use(dbCheckMiddleware())
 	group.Use(roleInjectionMiddleware()) // Add role injection after db check
 }

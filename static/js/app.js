@@ -195,7 +195,32 @@ function apiCall(method, path, params, cb) {
         responseText = jQuery.parseJSON(xhr.responseText);
       }
       catch {
-        responseText = { error: "Failed to parse the JSON response." };
+        // Enhanced error handling with HTTP status context
+        var errorMessage = "Request failed";
+        
+        if (xhr.status === 504) {
+          errorMessage = "Gateway timeout - the query took too long to execute. This often happens with large foreign tables or complex operations.";
+        } else if (xhr.status === 502) {
+          errorMessage = "Bad gateway - there's an issue connecting to the database server.";
+        } else if (xhr.status === 500) {
+          errorMessage = "Internal server error occurred while processing your request.";
+        } else if (xhr.status === 503) {
+          errorMessage = "Service temporarily unavailable - the database server may be overloaded.";
+        } else if (xhr.status >= 400 && xhr.status < 500) {
+          errorMessage = "Client error (HTTP " + xhr.status + ") - please check your request.";
+        } else if (xhr.status >= 500) {
+          errorMessage = "Server error (HTTP " + xhr.status + ") - please try again or contact an administrator.";
+        } else if (xhr.responseText && xhr.responseText.includes('<html>')) {
+          errorMessage = "Server returned HTML instead of expected JSON data. This usually indicates a gateway or proxy error.";
+        } else {
+          errorMessage = "Failed to parse server response - invalid JSON format.";
+        }
+        
+        responseText = { 
+          error: errorMessage,
+          http_status: xhr.status,
+          debug_info: xhr.responseText ? xhr.responseText.substring(0, 200) : "No response content"
+        };
       }
       cb(responseText);
     }
@@ -402,6 +427,25 @@ function unescapeHtml(str){
   return e.childNodes.length === 0 ? "" : e.childNodes[0].nodeValue;
 }
 
+function renderCellContent(content) {
+  if (!content || typeof content !== 'string') {
+    return escapeHtml(content);
+  }
+  
+  // First escape HTML for security
+  var escaped = escapeHtml(content);
+  
+  // Detect HTTP/HTTPS URLs
+  var urlRegex = /(https?:\/\/[^\s<>"']+)/gi;
+  escaped = escaped.replace(urlRegex, function(url) {
+    // Truncate long URLs for display
+    var displayUrl = url.length > 50 ? url.substring(0, 47) + '...' : url;
+    return '<a href="' + url + '" target="_blank" rel="noopener noreferrer" class="cell-link" title="' + url + '">' + displayUrl + '</a>';
+  });
+  
+  return escaped;
+}
+
 function getCurrentObject() {
   return currentObject || { name: "", type: "" };
 }
@@ -574,7 +618,7 @@ function buildTable(results, sortColumn, sortOrder, options) {
 
     // Add all actual row data here
     for (i in row) {
-      r += "<td data-col='" + i + "'><div>" + escapeHtml(row[i]) + "</div></td>";
+      r += "<td data-col='" + i + "'><div>" + renderCellContent(row[i]) + "</div></td>";
     }
 
     // Add row action button
@@ -671,6 +715,14 @@ function showTableInfo() {
   }
 
   apiCall("get", "/tables/" + name + "/info", {}, function(data) {
+    // Check if this is a foreign table
+    if (data.is_foreign_table === true) {
+      // Hide table information section for foreign tables
+      $(".table-information .lines").hide();
+      return;
+    }
+
+    // Show table information for regular tables
     $(".table-information .lines").show();
     $("#table_total_size").text(data.total_size);
     $("#table_data_size").text(data.data_size);
@@ -1740,6 +1792,9 @@ $(document).ready(function() {
 
     if (currentObject.type == "function") {
       sessionStorage.setItem("tab", "table_structure");
+    } else if (currentObject.type == "foreign_table") {
+      // Skip showTableInfo() for foreign tables - no statistics available
+      sessionStorage.setItem("tab", "table_content");
     } else {
       showTableInfo();
     }
