@@ -336,27 +336,27 @@ func (client *Client) isForeignTable(schema, tableName string) (bool, error) {
 			  FROM pg_catalog.pg_class c 
 			  LEFT JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace 
 			  WHERE c.relname = $1 AND n.nspname = $2`
-	
+
 	result, err := client.query(query, tableName, schema)
 	if err != nil {
 		return false, err
 	}
-	
+
 	if len(result.Rows) == 0 {
 		return false, nil
 	}
-	
+
 	isForeign, ok := result.Rows[0][0].(bool)
 	if !ok {
 		return false, fmt.Errorf("unexpected type for is_foreign result")
 	}
-	
+
 	return isForeign, nil
 }
 
 func (client *Client) TableRowsCount(table string, opts RowsOptions) (*Result, error) {
 	schema, tableName := getSchemaAndTable(table)
-	
+
 	// Check if this is a foreign table
 	isForeign, err := client.isForeignTable(schema, tableName)
 	if err != nil {
@@ -365,7 +365,7 @@ func (client *Client) TableRowsCount(table string, opts RowsOptions) (*Result, e
 			log.Printf("Warning: Could not determine if table %s.%s is foreign: %v", schema, tableName, err)
 		}
 	}
-	
+
 	// For foreign tables, avoid COUNT queries as they can timeout due to network latency
 	if isForeign {
 		// Return a default large number to indicate "many rows" without doing expensive COUNT
@@ -378,7 +378,7 @@ func (client *Client) TableRowsCount(table string, opts RowsOptions) (*Result, e
 		}
 		return result, nil
 	}
-	
+
 	// Return postgres estimated rows count on empty filter
 	if opts.Where == "" && client.serverType == postgresType {
 		res, err := client.EstimatedTableRowsCount(table, opts)
@@ -404,9 +404,9 @@ func (client *Client) TableInfo(table string) (*Result, error) {
 	if client.serverType == cockroachType {
 		return client.query(statements.TableInfoCockroach)
 	}
-	
+
 	schema, tableName := getSchemaAndTable(table)
-	
+
 	// Check if this is a foreign table
 	isForeign, err := client.isForeignTable(schema, tableName)
 	if err != nil {
@@ -415,7 +415,7 @@ func (client *Client) TableInfo(table string) (*Result, error) {
 			log.Printf("Warning: Could not determine if table %s.%s is foreign: %v", schema, tableName, err)
 		}
 	}
-	
+
 	// For foreign tables, return a minimal response indicating they're foreign
 	if isForeign {
 		result := &Result{
@@ -426,7 +426,7 @@ func (client *Client) TableInfo(table string) (*Result, error) {
 		}
 		return result, nil
 	}
-	
+
 	return client.query(statements.TableInfo, fmt.Sprintf(`"%s"."%s"`, schema, tableName))
 }
 

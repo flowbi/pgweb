@@ -427,6 +427,25 @@ function unescapeHtml(str){
   return e.childNodes.length === 0 ? "" : e.childNodes[0].nodeValue;
 }
 
+function renderCellContent(content) {
+  if (!content || typeof content !== 'string') {
+    return escapeHtml(content);
+  }
+  
+  // First escape HTML for security
+  var escaped = escapeHtml(content);
+  
+  // Detect HTTP/HTTPS URLs
+  var urlRegex = /(https?:\/\/[^\s<>"']+)/gi;
+  escaped = escaped.replace(urlRegex, function(url) {
+    // Truncate long URLs for display
+    var displayUrl = url.length > 50 ? url.substring(0, 47) + '...' : url;
+    return '<a href="' + url + '" target="_blank" rel="noopener noreferrer" class="cell-link" title="' + url + '">' + displayUrl + '</a>';
+  });
+  
+  return escaped;
+}
+
 function getCurrentObject() {
   return currentObject || { name: "", type: "" };
 }
@@ -599,7 +618,7 @@ function buildTable(results, sortColumn, sortOrder, options) {
 
     // Add all actual row data here
     for (i in row) {
-      r += "<td data-col='" + i + "'><div>" + escapeHtml(row[i]) + "</div></td>";
+      r += "<td data-col='" + i + "'><div>" + renderCellContent(row[i]) + "</div></td>";
     }
 
     // Add row action button

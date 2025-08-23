@@ -575,6 +575,17 @@
   font-size: 12px;
 }
 
+#results td .cell-link {
+  color: #0066cc;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+#results td .cell-link:hover {
+  color: #004499;
+  text-decoration: underline;
+}
+
 #results th:first-child,
 #results td:first-child {
   padding-left: 15px;
