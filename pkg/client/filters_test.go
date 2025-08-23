@@ -93,7 +93,7 @@ func TestFilterObjectsResult(t *testing.T) {
 		Rows: []Row{
 			{"1", "public", "users", "table", "postgres", "Users table"},
 			{"2", "app", "temp_data", "table", "postgres", "Temporary data"},
-			{"3", "public", "orders", "table", "postgres", "Orders table"}, 
+			{"3", "public", "orders", "table", "postgres", "Orders table"},
 			{"4", "app", "products", "table", "postgres", "Products table"},
 			{"5", "app", "temp_cache", "view", "postgres", "Temporary cache"},
 		},
@@ -104,7 +104,7 @@ func TestFilterObjectsResult(t *testing.T) {
 	// Should exclude: public.* (schema filter) and *temp_* (object filter)
 	// Should keep: app.products only
 	assert.Len(t, filtered.Rows, 1)
-	assert.Equal(t, "app", filtered.Rows[0][1])     // schema
+	assert.Equal(t, "app", filtered.Rows[0][1])      // schema
 	assert.Equal(t, "products", filtered.Rows[0][2]) // name
 }
 

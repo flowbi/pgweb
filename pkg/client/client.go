@@ -39,23 +39,23 @@ func CompileRegexPatterns(patterns string) ([]*regexp.Regexp, error) {
 	if patterns == "" {
 		return nil, nil
 	}
-	
+
 	patternList := strings.Split(patterns, ",")
 	regexes := make([]*regexp.Regexp, 0, len(patternList))
-	
+
 	for _, pattern := range patternList {
 		pattern = strings.TrimSpace(pattern)
 		if pattern == "" {
 			continue
 		}
-		
+
 		regex, err := regexp.Compile(pattern)
 		if err != nil {
 			return nil, fmt.Errorf("invalid regex pattern '%s': %v", pattern, err)
 		}
 		regexes = append(regexes, regex)
 	}
-	
+
 	return regexes, nil
 }
 
@@ -74,7 +74,7 @@ func FilterStringSlice(items []string, patterns []*regexp.Regexp) []string {
 	if len(patterns) == 0 {
 		return items
 	}
-	
+
 	filtered := make([]string, 0, len(items))
 	for _, item := range items {
 		if !shouldHideItem(item, patterns) {
@@ -89,39 +89,39 @@ func filterObjectsResult(result *Result, schemaPatterns []*regexp.Regexp, object
 	if len(schemaPatterns) == 0 && len(objectPatterns) == 0 {
 		return result
 	}
-	
+
 	// Objects query returns columns: oid, schema, name, type, owner, comment
 	// We need to filter based on schema (column 1) and name (column 2)
 	filteredRows := make([]Row, 0, len(result.Rows))
-	
+
 	for _, row := range result.Rows {
 		if len(row) < 3 {
 			continue // Skip malformed rows
 		}
-		
+
 		schema, ok := row[1].(string)
 		if !ok {
 			continue // Skip rows where schema is not a string
 		}
-		
+
 		name, ok := row[2].(string)
 		if !ok {
 			continue // Skip rows where name is not a string
 		}
-		
+
 		// Check if schema should be hidden
 		if shouldHideItem(schema, schemaPatterns) {
 			continue
 		}
-		
+
 		// Check if object name should be hidden
 		if shouldHideItem(name, objectPatterns) {
 			continue
 		}
-		
+
 		filteredRows = append(filteredRows, row)
 	}
-	
+
 	// Return new result with filtered rows
 	return &Result{
 		Columns:    result.Columns,
@@ -371,13 +371,13 @@ func (client *Client) Schemas() ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	
+
 	// Apply schema filtering if configured
 	patterns, err := CompileRegexPatterns(command.Opts.HideSchemas)
 	if err != nil {
 		return nil, fmt.Errorf("failed to compile schema hide patterns: %v", err)
 	}
-	
+
 	return FilterStringSlice(schemas, patterns), nil
 }
 
@@ -386,19 +386,19 @@ func (client *Client) Objects() (*Result, error) {
 	if err != nil {
 		return nil, err
 	}
-	
+
 	// Apply schema filtering if configured
 	schemaPatterns, err := CompileRegexPatterns(command.Opts.HideSchemas)
 	if err != nil {
 		return nil, fmt.Errorf("failed to compile schema hide patterns: %v", err)
 	}
-	
+
 	// Apply object filtering if configured
 	objectPatterns, err := CompileRegexPatterns(command.Opts.HideObjects)
 	if err != nil {
 		return nil, fmt.Errorf("failed to compile object hide patterns: %v", err)
 	}
-	
+
 	return filterObjectsResult(result, schemaPatterns, objectPatterns), nil
 }
 
