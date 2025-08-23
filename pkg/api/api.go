@@ -585,7 +585,14 @@ func HandleQuery(query string, c *gin.Context) {
 		query = string(rawQuery)
 	}
 
-	result, err := DB(c).Query(query)
+	// Extract URL parameters and set them on the client for substitution
+	client := DB(c)
+	urlParams := extractURLParams(c)
+	if len(urlParams) > 0 {
+		client.SetURLParams(urlParams)
+	}
+
+	result, err := client.Query(query)
 	if err != nil {
 		badRequest(c, err)
 		return

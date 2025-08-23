@@ -1264,6 +1264,11 @@ function displayURLParameters() {
   var sqlParams = {};
   var hasParams = false;
 
+  // Check if parameter indicator should be hidden
+  if (urlParams.get('hideParamIndicator') === 'true') {
+    return;
+  }
+
   // Extract SQL-relevant parameters (matching backend patterns)
   var paramPatterns = [/^gsr_\w+$/, /^tenant_\w+$/, /^user_\w+$/, /^client_\w+$/, /^app_\w+$/];
   
@@ -1283,7 +1288,7 @@ function displayURLParameters() {
 
   if (hasParams) {
     // Create a small indicator showing active parameters
-    var paramDisplay = '<div id="url-params-indicator" style="position: absolute; top: 10px; right: 10px; background: rgba(0,123,255,0.1); border: 1px solid #007bff; border-radius: 4px; padding: 5px 10px; font-size: 12px; z-index: 1000;">';
+    var paramDisplay = '<div id="url-params-indicator" style="position: absolute; top: 70px; right: 10px; background: rgba(0,123,255,0.1); border: 1px solid #007bff; border-radius: 4px; padding: 5px 10px; font-size: 12px; z-index: 1000;">';
     paramDisplay += '<strong>Active Parameters:</strong><br>';
     
     for (var key in sqlParams) {
