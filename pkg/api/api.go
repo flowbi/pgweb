@@ -434,17 +434,30 @@ func GetTableRows(c *gin.Context) {
 	numFetch := int64(opts.Limit)
 	numOffset := int64(opts.Offset)
 	numRows := countRes.Rows[0][0].(int64)
-	numPages := numRows / numFetch
+	
+	// Handle foreign tables where count is -1 (unknown)
+	if numRows == -1 {
+		// For foreign tables, we don't know the total count, so set pagination accordingly
+		res.Pagination = &client.Pagination{
+			Rows:    -1, // Indicate unknown total count
+			Page:    (numOffset / numFetch) + 1,
+			Pages:   -1, // Unknown total pages
+			PerPage: numFetch,
+		}
+	} else {
+		// Normal pagination calculation
+		numPages := numRows / numFetch
 
-	if numPages*numFetch < numRows {
-		numPages++
-	}
+		if numPages*numFetch < numRows {
+			numPages++
+		}
 
-	res.Pagination = &client.Pagination{
-		Rows:    numRows,
-		Page:    (numOffset / numFetch) + 1,
-		Pages:   numPages,
-		PerPage: numFetch,
+		res.Pagination = &client.Pagination{
+			Rows:    numRows,
+			Page:    (numOffset / numFetch) + 1,
+			Pages:   numPages,
+			PerPage: numFetch,
+		}
 	}
 
 	serveResult(c, res, err)

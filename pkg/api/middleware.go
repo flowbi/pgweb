@@ -91,3 +91,22 @@ func requireLocalQueries() gin.HandlerFunc {
 		c.Next()
 	}
 }
+
+// Middleware to provide better error messages for common database operation failures
+func errorHandlingMiddleware() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		// Catch panics and convert them to proper error responses
+		defer func() {
+			if err := recover(); err != nil {
+				log.Printf("Panic in request %s: %v", c.Request.URL.Path, err)
+				c.JSON(500, gin.H{
+					"error": "Internal server error occurred while processing your request",
+					"type":  "server_panic",
+				})
+				c.Abort()
+			}
+		}()
+
+		c.Next()
+	}
+}
