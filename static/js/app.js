@@ -1259,6 +1259,44 @@ function addShortcutTooltips() {
   }
 }
 
+function displayURLParameters() {
+  var urlParams = new URLSearchParams(window.location.search);
+  var sqlParams = {};
+  var hasParams = false;
+
+  // Extract SQL-relevant parameters (matching backend patterns)
+  var paramPatterns = [/^gsr_\w+$/, /^tenant_\w+$/, /^user_\w+$/, /^client_\w+$/, /^app_\w+$/];
+  
+  for (var pair of urlParams.entries()) {
+    var key = pair[0];
+    var value = pair[1];
+    
+    // Check if this parameter matches SQL parameter patterns
+    for (var pattern of paramPatterns) {
+      if (pattern.test(key)) {
+        sqlParams[key] = value;
+        hasParams = true;
+        break;
+      }
+    }
+  }
+
+  if (hasParams) {
+    // Create a small indicator showing active parameters
+    var paramDisplay = '<div id="url-params-indicator" style="position: absolute; top: 10px; right: 10px; background: rgba(0,123,255,0.1); border: 1px solid #007bff; border-radius: 4px; padding: 5px 10px; font-size: 12px; z-index: 1000;">';
+    paramDisplay += '<strong>Active Parameters:</strong><br>';
+    
+    for (var key in sqlParams) {
+      paramDisplay += '@' + key + ' = ' + sqlParams[key] + '<br>';
+    }
+    
+    paramDisplay += '</div>';
+    $('body').append(paramDisplay);
+    
+    console.log('URL parameters available for query substitution:', sqlParams);
+  }
+}
+
 // Get the latest release from Github API
 function getLatestReleaseInfo(current) {
   try {
@@ -2076,6 +2114,9 @@ $(document).ready(function() {
     sessionStorage.setItem("session_id", sessionId);
     window.history.pushState({}, document.title, window.location.pathname);
   }
+
+  // Display URL parameters for query substitution
+  displayURLParameters();
 
   getInfo(function(resp) {
     if (resp.error) {
