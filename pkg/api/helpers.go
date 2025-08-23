@@ -188,3 +188,33 @@ func errorResponse(c *gin.Context, status int, err interface{}) {
 func badRequest(c *gin.Context, err interface{}) {
 	errorResponse(c, 400, err)
 }
+
+// extractURLParams extracts query parameters that should be used for SQL parameter substitution
+// Returns a map of parameters that start with common SQL parameter prefixes
+func extractURLParams(c *gin.Context) map[string]string {
+	params := make(map[string]string)
+	
+	// Define common SQL parameter patterns
+	paramPatterns := []*regexp.Regexp{
+		regexp.MustCompile(`^gsr_\w+$`),     // gsr_client, gsr_inst, etc.
+		regexp.MustCompile(`^tenant_\w+$`),  // tenant_id, tenant_name, etc.
+		regexp.MustCompile(`^user_\w+$`),    // user_id, user_role, etc.
+		regexp.MustCompile(`^client_\w+$`),  // client_id, client_name, etc.
+		regexp.MustCompile(`^app_\w+$`),     // app_id, app_name, etc.
+	}
+	
+	// Extract all query parameters
+	for key, values := range c.Request.URL.Query() {
+		if len(values) > 0 {
+			// Check if this parameter matches our SQL parameter patterns
+			for _, pattern := range paramPatterns {
+				if pattern.MatchString(key) {
+					params[key] = values[0] // Use the first value
+					break
+				}
+			}
+		}
+	}
+	
+	return params
+}
