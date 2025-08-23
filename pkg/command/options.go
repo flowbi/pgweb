@@ -66,6 +66,8 @@ type Options struct {
 	MetricsEnabled               bool   `long:"metrics" description:"Enable Prometheus metrics endpoint"`
 	MetricsPath                  string `long:"metrics-path" description:"Path prefix for Prometheus metrics endpoint" default:"/metrics"`
 	MetricsAddr                  string `long:"metrics-addr" description:"Listen host and port for Prometheus metrics server"`
+	HideSchemas                  string `long:"hide-schemas" description:"Comma-separated list of regex patterns to hide schemas (e.g., 'public,meta')"`
+	HideObjects                  string `long:"hide-objects" description:"Comma-separated list of regex patterns to hide objects/tables (e.g., '^temp_,_backup$')"`
 }
 
 var Opts Options
@@ -152,6 +154,14 @@ func ParseOptions(args []string) (Options, error) {
 
 	if opts.AuthPass == "" {
 		opts.AuthPass = getPrefixedEnvVar("AUTH_PASS")
+	}
+
+	if opts.HideSchemas == "" {
+		opts.HideSchemas = getPrefixedEnvVar("HIDE_SCHEMAS")
+	}
+
+	if opts.HideObjects == "" {
+		opts.HideObjects = getPrefixedEnvVar("HIDE_OBJECTS")
 	}
 
 	if opts.ConnectBackend != "" {
@@ -241,5 +251,7 @@ func AvailableEnvVars() string {
 		"  " + envVarPrefix + "LOCK_SESSION  Lock session to a single database connection",
 		"  " + envVarPrefix + "AUTH_USER     HTTP basic auth username",
 		"  " + envVarPrefix + "AUTH_PASS     HTTP basic auth password",
+		"  " + envVarPrefix + "HIDE_SCHEMAS  Comma-separated regex patterns to hide schemas",
+		"  " + envVarPrefix + "HIDE_OBJECTS  Comma-separated regex patterns to hide objects/tables",
 	}, "\n")
 }
