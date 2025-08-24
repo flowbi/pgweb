@@ -8,6 +8,7 @@ var currentObject       = null;
 var autocompleteObjects = [];
 var inputResizing       = false;
 var inputResizeOffset   = null;
+var globalSqlParams     = {};
 
 var filterOptions = {
   "equal":      "= 'DATA'",
@@ -241,13 +242,63 @@ function getTablesStats(cb)                 { apiCall("get", "/tables_stats", {}
 function getFunction(id, cb)                { apiCall("get", "/functions/" + id, {}, cb); }
 function getHistory(cb)                     { apiCall("get", "/history", {}, cb); }
 function getBookmarks(cb)                   { apiCall("get", "/bookmarks", {}, cb); }
-function executeQuery(query, cb)            { apiCall("post", "/query", { query: query }, cb); }
+function executeQuery(query, cb)            { apiCall("post", "/query", { query: substituteQueryParameters(query) }, cb); }
 function explainQuery(query, cb)            { apiCall("post", "/explain", { query: query }, cb); }
 function analyzeQuery(query, cb)            { apiCall("post", "/analyze", { query: query }, cb); }
 function disconnect(cb)                     { apiCall("post", "/disconnect", {}, cb); }
 
 function encodeQuery(query) {
   return Base64.encode(query).replace(/\+/g, "-").replace(/\//g, "_").replace(/=/g, ".");
+}
+
+// Extract SQL parameters from URL and store globally
+function extractSqlParameters() {
+  var urlParams = new URLSearchParams(window.location.search);
+  var sqlParams = {};
+  
+  // Define common SQL parameter patterns (matching backend patterns)
+  var paramPatterns = [/^gsr_\w+$/, /^tenant_\w+$/, /^user_\w+$/, /^client_\w+$/, /^app_\w+$/];
+  
+  for (var pair of urlParams.entries()) {
+    var key = pair[0];
+    var value = pair[1];
+    
+    // Check if this parameter matches SQL parameter patterns
+    for (var pattern of paramPatterns) {
+      if (pattern.test(key)) {
+        sqlParams[key] = value;
+        break;
+      }
+    }
+  }
+  
+  // Store globally and return
+  globalSqlParams = sqlParams;
+  return sqlParams;
+}
+
+// Substitute @parameter placeholders with actual values in query
+function substituteQueryParameters(query) {
+  if (!globalSqlParams || Object.keys(globalSqlParams).length === 0) {
+    return query;
+  }
+  
+  var result = query;
+  for (var param in globalSqlParams) {
+    var placeholder = '@' + param;
+    var value = globalSqlParams[param];
+    // Escape single quotes in the value to prevent SQL injection
+    var escapedValue = value.replace(/'/g, "''");
+    result = result.replace(new RegExp('@' + param, 'g'), "'" + escapedValue + "'");
+  }
+  
+  console.log('Query parameter substitution:', {
+    original: query,
+    substituted: result,
+    parameters: globalSqlParams
+  });
+  
+  return result;
 }
 
 function showErrorBanner(text) {
@@ -1261,30 +1312,15 @@ function addShortcutTooltips() {
 
 function displayURLParameters() {
   var urlParams = new URLSearchParams(window.location.search);
-  var sqlParams = {};
-  var hasParams = false;
 
   // Check if parameter indicator should be hidden
   if (urlParams.get('hideParamIndicator') === 'true') {
     return;
   }
 
-  // Extract SQL-relevant parameters (matching backend patterns)
-  var paramPatterns = [/^gsr_\w+$/, /^tenant_\w+$/, /^user_\w+$/, /^client_\w+$/, /^app_\w+$/];
-  
-  for (var pair of urlParams.entries()) {
-    var key = pair[0];
-    var value = pair[1];
-    
-    // Check if this parameter matches SQL parameter patterns
-    for (var pattern of paramPatterns) {
-      if (pattern.test(key)) {
-        sqlParams[key] = value;
-        hasParams = true;
-        break;
-      }
-    }
-  }
+  // Extract SQL parameters and store them globally
+  var sqlParams = extractSqlParameters();
+  var hasParams = Object.keys(sqlParams).length > 0;
 
   if (hasParams) {
     // Create a small indicator showing active parameters

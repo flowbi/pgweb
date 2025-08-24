@@ -140,11 +140,10 @@ type Client struct {
 	queryTimeout     time.Duration
 	readonly         bool
 	closed           bool
-	defaultRole      string            // Role from X-Database-Role header
-	URLParams        map[string]string `json:"url_params,omitempty"` // URL parameters for query substitution
-	External         bool              `json:"external"`
-	History          []history.Record  `json:"history"`
-	ConnectionString string            `json:"connection_string"`
+	defaultRole      string           // Role from X-Database-Role header
+	External         bool             `json:"external"`
+	History          []history.Record `json:"history"`
+	ConnectionString string           `json:"connection_string"`
 }
 
 func getSchemaAndTable(str string) (string, string) {
@@ -153,34 +152,6 @@ func getSchemaAndTable(str string) (string, string) {
 		return "public", chunks[0]
 	}
 	return chunks[0], chunks[1]
-}
-
-// SetURLParams sets URL parameters for query substitution
-func (client *Client) SetURLParams(params map[string]string) {
-	if client.URLParams == nil {
-		client.URLParams = make(map[string]string)
-	}
-	for k, v := range params {
-		client.URLParams[k] = v
-	}
-}
-
-// SubstituteQueryParams replaces @param placeholders with URL parameter values
-func (client *Client) SubstituteQueryParams(query string) string {
-	if client.URLParams == nil || len(client.URLParams) == 0 {
-		return query
-	}
-
-	result := query
-	for param, value := range client.URLParams {
-		// Replace @param with actual value, properly escaped for SQL
-		placeholder := "@" + param
-		// Escape single quotes in the value to prevent SQL injection
-		escapedValue := strings.ReplaceAll(value, "'", "''")
-		result = strings.ReplaceAll(result, placeholder, "'"+escapedValue+"'")
-	}
-
-	return result
 }
 
 func New() (*Client, error) {
@@ -630,12 +601,8 @@ func (client *Client) Activity() (*Result, error) {
 }
 
 func (client *Client) Query(query string) (*Result, error) {
-	// Apply URL parameter substitution if available
-	substitutedQuery := client.SubstituteQueryParams(query)
+	res, err := client.query(query)
 
-	res, err := client.query(substitutedQuery)
-
-	// Save history records with the original query (before substitution) for transparency
 	if err == nil && !client.hasHistoryRecord(query) {
 		client.History = append(client.History, history.NewRecord(query))
 	}

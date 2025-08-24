@@ -125,12 +125,6 @@ func ConnectWithBackend(c *gin.Context) {
 	}
 	cl.External = true
 
-	// Extract URL parameters for query substitution
-	urlParams := extractURLParams(c)
-	if len(urlParams) > 0 {
-		cl.SetURLParams(urlParams)
-	}
-
 	// Finalize session seetup
 	_, err = cl.Info()
 	if err == nil {
@@ -174,12 +168,6 @@ func Connect(c *gin.Context) {
 	if err != nil {
 		badRequest(c, err)
 		return
-	}
-
-	// Extract URL parameters for query substitution
-	urlParams := extractURLParams(c)
-	if len(urlParams) > 0 {
-		cl.SetURLParams(urlParams)
 	}
 
 	info, err := cl.Info()
@@ -585,14 +573,7 @@ func HandleQuery(query string, c *gin.Context) {
 		query = string(rawQuery)
 	}
 
-	// Extract URL parameters and set them on the client for substitution
-	client := DB(c)
-	urlParams := extractURLParams(c)
-	if len(urlParams) > 0 {
-		client.SetURLParams(urlParams)
-	}
-
-	result, err := client.Query(query)
+	result, err := DB(c).Query(query)
 	if err != nil {
 		badRequest(c, err)
 		return
