@@ -1,0 +1,53 @@
+services:
+  postgres:
+    container_name: flowbi-postgres
+    image: postgres:15
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_DB: pgweb_test
+      POSTGRES_USER: pgweb_dev
+      POSTGRES_PASSWORD: pgweb_dev_password
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pgweb_dev -h localhost"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - pgweb
+
+  pgweb:
+    container_name: pgweb
+    build: .
+    ports:
+      - "8081:8081"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      # Default to local postgres for development
+      # Override PGWEB_DATABASE_URL for production with URL-encoded password
+      PGWEB_DATABASE_URL: ${PGWEB_DATABASE_URL:-postgres://pgweb_dev:pgweb_dev_password@postgres:5432/pgweb_test}
+    command:
+      [
+        "./pgweb",
+        "--url",
+        "${PGWEB_DATABASE_URL:-postgres://pgweb_dev:pgweb_dev_password@postgres:5432/pgweb_test}",
+        "--bind",
+        "0.0.0.0",
+        "--listen",
+        "8081",
+        "--debug",
+      ]
+    networks:
+      - pgweb
+
+volumes:
+  postgres_data:
+    name: flowbi_pgweb_postgres_data
+
+networks:
+  pgweb:
+    name: flowbi_pgweb
