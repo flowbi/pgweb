@@ -702,6 +702,11 @@ function setCurrentTab(id) {
 
   // Persist tab selection into the session storage
   sessionStorage.setItem("tab", id);
+  
+  // Update parameter overlay visibility based on new tab
+  if (typeof updateParameterOverlay === 'function') {
+    updateParameterOverlay(id);
+  }
 }
 
 function showQueryHistory() {
@@ -1310,6 +1315,28 @@ function addShortcutTooltips() {
   }
 }
 
+// Global variables for parameter overlay management
+var globalSqlParamsForOverlay = {};
+var shouldShowParamIndicator = false;
+
+function updateParameterOverlay(currentTabId) {
+  // Remove existing indicator
+  $('#url-params-indicator').remove();
+  
+  // Only show if we should show indicator and we're on query tab
+  if (shouldShowParamIndicator && currentTabId === 'table_query') {
+    var paramDisplay = '<div id="url-params-indicator" style="position: absolute; top: 70px; right: 10px; background: rgba(0,123,255,0.1); border: 1px solid #007bff; border-radius: 4px; padding: 5px 10px; font-size: 12px; z-index: 1000;">';
+    paramDisplay += '<strong>Active Parameters:</strong><br>';
+    
+    for (var key in globalSqlParamsForOverlay) {
+      paramDisplay += '@' + key + ' = ' + globalSqlParamsForOverlay[key] + '<br>';
+    }
+    
+    paramDisplay += '</div>';
+    $('body').append(paramDisplay);
+  }
+}
+
 function displayURLParameters() {
   var urlParams = new URLSearchParams(window.location.search);
   var hideIndicator = urlParams.get('hideParamIndicator') === 'true';
@@ -1318,30 +1345,14 @@ function displayURLParameters() {
   var sqlParams = extractSqlParameters();
   var hasParams = Object.keys(sqlParams).length > 0;
 
-  if (hasParams && !hideIndicator) {
-    var showOverlay = function() {
-      $('#url-params-indicator').remove(); // Remove existing indicator if present
-
-      if ($('#table_query').hasClass('selected')) {
-        var paramDisplay = '<div id="url-params-indicator" style="position: absolute; top: 70px; right: 10px; background: rgba(0,123,255,0.1); border: 1px solid #007bff; border-radius: 4px; padding: 5px 10px; font-size: 12px; z-index: 1000;">';
-        paramDisplay += '<strong>Active Parameters:</strong><br>';
-        
-        for (var key in sqlParams) {
-          paramDisplay += '@' + key + ' = ' + sqlParams[key] + '<br>';
-        }
-        
-        paramDisplay += '</div>';
-        $('body').append(paramDisplay);
-      }
-    };
-
-    // Show overlay initially if we're already on query tab
-    showOverlay();
-    
-    // Update overlay visibility when tabs change
-    $('#nav ul li').on('click', function() {
-      setTimeout(showOverlay, 100); // Small delay to ensure tab change has processed
-    });
+  // Store parameters and indicator preference globally
+  globalSqlParamsForOverlay = sqlParams;
+  shouldShowParamIndicator = hasParams && !hideIndicator;
+  
+  // Show overlay for current tab (will be managed by setCurrentTab from now on)
+  if (shouldShowParamIndicator) {
+    var currentTab = $('#nav ul li.selected').attr('id') || 'table_query';
+    updateParameterOverlay(currentTab);
   }
   
   if (hasParams) {
