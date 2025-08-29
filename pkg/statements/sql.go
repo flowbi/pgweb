@@ -2,6 +2,9 @@ package statements
 
 import (
 	_ "embed"
+	"log"
+	"os"
+	"path/filepath"
 )
 
 var (
@@ -24,6 +27,8 @@ var (
 	TableIndexes string
 
 	//go:embed sql/table_constraints.sql
+	tableConstraintsEmbedded string
+	
 	TableConstraints string
 
 	//go:embed sql/table_info.sql
@@ -61,3 +66,17 @@ var (
 		"9.6":     "SELECT datname, query, state, wait_event, wait_event_type, query_start, state_change, pid, datid, application_name, client_addr FROM pg_stat_activity WHERE datname = current_database() and usename = current_user",
 	}
 )
+
+func init() {
+	TableConstraints = loadTableConstraintsSQL()
+}
+
+func loadTableConstraintsSQL() string {
+	externalPath := filepath.Join("/tmp/queries", "table_constraints.sql")
+	if data, err := os.ReadFile(externalPath); err == nil {
+		log.Printf("Using external table_constraints.sql from: %s", externalPath)
+		return string(data)
+	}
+	
+	return tableConstraintsEmbedded
+}
