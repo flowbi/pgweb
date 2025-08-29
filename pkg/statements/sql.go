@@ -28,7 +28,7 @@ var (
 
 	//go:embed sql/table_constraints.sql
 	tableConstraintsEmbedded string
-	
+
 	TableConstraints string
 
 	//go:embed sql/table_info.sql
@@ -77,6 +77,6 @@ func loadTableConstraintsSQL() string {
 		log.Printf("Using external table_constraints.sql from: %s", externalPath)
 		return string(data)
 	}
-	
+
 	return tableConstraintsEmbedded
 }

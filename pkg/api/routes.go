@@ -32,6 +32,7 @@ func SetupRoutes(router *gin.Engine) {
 	}
 
 	api.GET("/info", GetInfo)
+	api.GET("/config", GetConfig)
 	api.POST("/connect", Connect)
 	api.POST("/disconnect", Disconnect)
 	api.POST("/switchdb", SwitchDb)

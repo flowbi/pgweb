@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	neturl "net/url"
+	"os"
 	"strings"
 	"time"
 
@@ -620,6 +621,29 @@ func GetInfo(c *gin.Context) {
 			"bookmarks_only": command.Opts.BookmarksOnly,
 		},
 	})
+}
+
+// GetConfig returns client configuration including custom parameter patterns
+func GetConfig(c *gin.Context) {
+	// Get custom parameter patterns from environment variable
+	customParams := os.Getenv("PGWEB_CUSTOM_PARAMS")
+
+	config := gin.H{
+		"parameter_patterns": gin.H{
+			"custom": []string{},
+		},
+	}
+
+	// Add custom patterns if configured (no defaults)
+	if customParams != "" {
+		customPatternsList := strings.Split(customParams, ",")
+		for i, pattern := range customPatternsList {
+			customPatternsList[i] = strings.TrimSpace(pattern)
+		}
+		config["parameter_patterns"].(gin.H)["custom"] = customPatternsList
+	}
+
+	successResponse(c, config)
 }
 
 // DataExport performs database table export

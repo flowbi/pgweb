@@ -2,6 +2,7 @@ package api
 
 import (
 	"log"
+	"os"
 	"strings"
 
 	"github.com/gin-gonic/gin"
@@ -63,6 +64,17 @@ func roleInjectionMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// Extract X-Database-Role header
 		role := c.GetHeader("X-Database-Role")
+
+		// If no header role, check for test role environment variable (for development/testing)
+		if role == "" {
+			testRole := os.Getenv("PGWEB_TEST_ROLE")
+			if testRole != "" {
+				role = testRole
+				if command.Opts.Debug {
+					log.Printf("Using test role from environment: %s", role)
+				}
+			}
+		}
 
 		if role != "" {
 			// Get the current database client

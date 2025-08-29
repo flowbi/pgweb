@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"os"
 	"testing"
 
 	"github.com/gin-gonic/gin"
@@ -98,13 +99,19 @@ func TestExtractURLParamsEmpty(t *testing.T) {
 	assert.Empty(t, params)
 }
 
-func TestExtractURLParamsGSRPattern(t *testing.T) {
+func TestExtractURLParamsWithConfiguredPatterns(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
+	// Set environment variable for test
+	originalEnv := os.Getenv("PGWEB_CUSTOM_PARAMS")
+	os.Setenv("PGWEB_CUSTOM_PARAMS", "Client,Instance,AccountId")
+	defer os.Setenv("PGWEB_CUSTOM_PARAMS", originalEnv)
+
 	values := url.Values{}
-	values.Set("gsr_client", "test-client")
-	values.Set("gsr_inst", "test-instance")
-	values.Set("gsr_environment", "production")
+	values.Set("Client", "test-client")
+	values.Set("Instance", "test-instance")
+	values.Set("AccountId", "123")
+	values.Set("ignored_param", "should-be-ignored")
 
 	req, _ := http.NewRequest("GET", "/api/query?"+values.Encode(), nil)
 	c := &gin.Context{Request: req}
@@ -112,47 +119,59 @@ func TestExtractURLParamsGSRPattern(t *testing.T) {
 	params := extractURLParams(c)
 
 	assert.Len(t, params, 3)
-	assert.Equal(t, "test-client", params["gsr_client"])
-	assert.Equal(t, "test-instance", params["gsr_inst"])
-	assert.Equal(t, "production", params["gsr_environment"])
-}
-
-func TestExtractURLParamsMixedPatterns(t *testing.T) {
-	gin.SetMode(gin.TestMode)
-
-	values := url.Values{}
-	values.Set("gsr_client", "test-client")
-	values.Set("tenant_id", "123")
-	values.Set("user_role", "admin")
-	values.Set("ignored_param", "should-not-appear")
-	values.Set("primaryColor", "#007bff") // UI parameter, should be ignored
-
-	req, _ := http.NewRequest("GET", "/api/query?"+values.Encode(), nil)
-	c := &gin.Context{Request: req}
-
-	params := extractURLParams(c)
-
-	assert.Len(t, params, 3)
-	assert.Equal(t, "test-client", params["gsr_client"])
-	assert.Equal(t, "123", params["tenant_id"])
-	assert.Equal(t, "admin", params["user_role"])
+	assert.Equal(t, "test-client", params["Client"])
+	assert.Equal(t, "test-instance", params["Instance"])
+	assert.Equal(t, "123", params["AccountId"])
 	assert.NotContains(t, params, "ignored_param")
-	assert.NotContains(t, params, "primaryColor")
 }
 
-func TestExtractURLParamsInvalidPatterns(t *testing.T) {
+func TestExtractURLParamsNoConfiguration(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
+	// Clear environment variable for test
+	originalEnv := os.Getenv("PGWEB_CUSTOM_PARAMS")
+	os.Setenv("PGWEB_CUSTOM_PARAMS", "")
+	defer os.Setenv("PGWEB_CUSTOM_PARAMS", originalEnv)
+
 	values := url.Values{}
-	values.Set("gsr", "should-not-match")     // No underscore
-	values.Set("gsr_", "should-not-match")    // No word after underscore
-	values.Set("_client", "should-not-match") // Starts with underscore
-	values.Set("tenant", "should-not-match")  // No underscore
+	values.Set("Client", "test-client")
+	values.Set("Instance", "test-instance")
+	values.Set("any_param", "any-value")
 
 	req, _ := http.NewRequest("GET", "/api/query?"+values.Encode(), nil)
 	c := &gin.Context{Request: req}
 
 	params := extractURLParams(c)
 
+	// Should be empty when no patterns are configured
 	assert.Empty(t, params)
+}
+
+func TestExtractURLParamsExactMatchOnly(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	// Set environment variable for test
+	originalEnv := os.Getenv("PGWEB_CUSTOM_PARAMS")
+	os.Setenv("PGWEB_CUSTOM_PARAMS", "Client,Instance")
+	defer os.Setenv("PGWEB_CUSTOM_PARAMS", originalEnv)
+
+	values := url.Values{}
+	values.Set("Client", "should-match")       // Exact match
+	values.Set("client", "should-not-match")   // Case sensitive - doesn't match
+	values.Set("ClientId", "should-not-match") // Partial match - doesn't match
+	values.Set("Instance", "should-match")     // Exact match
+	values.Set("tenant", "should-not-match")   // No underscore
+
+	req, _ := http.NewRequest("GET", "/api/query?"+values.Encode(), nil)
+	c := &gin.Context{Request: req}
+
+	params := extractURLParams(c)
+
+	// Should only match exact parameter names
+	assert.Len(t, params, 2)
+	assert.Equal(t, "should-match", params["Client"])
+	assert.Equal(t, "should-match", params["Instance"])
+	assert.NotContains(t, params, "client")
+	assert.NotContains(t, params, "ClientId")
+	assert.NotContains(t, params, "tenant")
 }

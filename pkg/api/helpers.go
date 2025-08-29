@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"mime"
 	"net/http"
+	"os"
 	"path/filepath"
 	"regexp"
 	"strconv"
@@ -190,25 +191,29 @@ func badRequest(c *gin.Context, err interface{}) {
 }
 
 // extractURLParams extracts query parameters that should be used for SQL parameter substitution
-// Returns a map of parameters that start with common SQL parameter prefixes
+// Returns a map of parameters that match configured patterns from PGWEB_CUSTOM_PARAMS
 func extractURLParams(c *gin.Context) map[string]string {
 	params := make(map[string]string)
 
-	// Define common SQL parameter patterns
-	paramPatterns := []*regexp.Regexp{
-		regexp.MustCompile(`^gsr_\w+$`),    // gsr_client, gsr_inst, etc.
-		regexp.MustCompile(`^tenant_\w+$`), // tenant_id, tenant_name, etc.
-		regexp.MustCompile(`^user_\w+$`),   // user_id, user_role, etc.
-		regexp.MustCompile(`^client_\w+$`), // client_id, client_name, etc.
-		regexp.MustCompile(`^app_\w+$`),    // app_id, app_name, etc.
+	// Get custom parameter patterns from environment variable
+	customParams := os.Getenv("PGWEB_CUSTOM_PARAMS")
+	if customParams == "" {
+		// No patterns configured - parameter feature disabled
+		return params
+	}
+
+	// Parse configured patterns (exact matches only)
+	configuredPatterns := strings.Split(customParams, ",")
+	for i, pattern := range configuredPatterns {
+		configuredPatterns[i] = strings.TrimSpace(pattern)
 	}
 
 	// Extract all query parameters
 	for key, values := range c.Request.URL.Query() {
 		if len(values) > 0 {
-			// Check if this parameter matches our SQL parameter patterns
-			for _, pattern := range paramPatterns {
-				if pattern.MatchString(key) {
+			// Check if this parameter matches configured patterns (exact match)
+			for _, pattern := range configuredPatterns {
+				if key == pattern {
 					params[key] = values[0] // Use the first value
 					break
 				}

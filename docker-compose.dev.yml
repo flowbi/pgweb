@@ -31,7 +31,7 @@ services:
       # Override PGWEB_DATABASE_URL for production with URL-encoded password
       PGWEB_DATABASE_URL: ${PGWEB_DATABASE_URL:-postgres://pgweb_dev:pgweb_dev_password@postgres:5432/pgweb_test?sslmode=disable}
       PGWEB_TEST_ROLE: ${PGWEB_TEST_ROLE}
-      PGWEB_CUSTOM_PARAM_PATTERNS: ${PGWEB_CUSTOM_PARAM_PATTERNS}
+      PGWEB_CUSTOM_PARAMS: ${PGWEB_CUSTOM_PARAMS}
     command:
       [
         "./pgweb",
