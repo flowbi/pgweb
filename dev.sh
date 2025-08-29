@@ -93,7 +93,7 @@ case "$ACTION" in
         
         # Test parameter substitution
         echo_info "Test URL with parameters:"
-        echo_info "http://localhost:8081/?gsr_client=test-client&gsr_inst=test-instance"
+        echo_info "http://localhost:8081/?Client=client&Instance=instance&ClientName=clientname&InstanceName=instance-name&AccountId=account-id&AccountPerspective=account-perspective&AccountDbUser=account-db-user&AccountName=account-name&AccountEmail=account-email&FolderName=folder-name&InvalidParameter=shouldnotshow"
         ;;
         
     "stop"|"down")
@@ -131,7 +131,7 @@ case "$ACTION" in
         echo_info "Testing parameter substitution..."
         sleep 2
         echo_info "Opening pgweb with test parameters..."
-        open "http://localhost:8081/?gsr_client=test-client&gsr_inst=test-instance" 2>/dev/null || echo_warning "Could not open browser automatically"
+        open "http://localhost:8081/?Client=client&Instance=instance&ClientName=clientname&InstanceName=instance-name&AccountId=account-id&AccountPerspective=account-perspective&AccountDbUser=account-db-user&AccountName=account-name&AccountEmail=account-email&FolderName=folder-name&InvalidParameter=shouldnotshow" 2>/dev/null || echo_warning "Could not open browser automatically"
         ;;
         
     "help"|*)

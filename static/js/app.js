@@ -9,6 +9,7 @@ var autocompleteObjects = [];
 var inputResizing       = false;
 var inputResizeOffset   = null;
 var globalSqlParams     = {};
+var parameterPatterns   = []; // Will be loaded dynamically from server config
 
 var filterOptions = {
   "equal":      "= 'DATA'",
@@ -229,6 +230,7 @@ function apiCall(method, path, params, cb) {
 }
 
 function getInfo(cb)                        { apiCall("get", "/info", {}, cb); }
+function getConfig(cb)                      { apiCall("get", "/config", {}, cb); }
 function getConnection(cb)                  { apiCall("get", "/connection", {}, cb); }
 function getServerSettings(cb)              { apiCall("get", "/server_settings", {}, cb); }
 function getSchemas(cb)                     { apiCall("get", "/schemas", {}, cb); }
@@ -251,20 +253,51 @@ function encodeQuery(query) {
   return Base64.encode(query).replace(/\+/g, "-").replace(/\//g, "_").replace(/=/g, ".");
 }
 
+// Load parameter patterns configuration from server
+function loadParameterPatterns(callback) {
+  getConfig(function(config) {
+    if (config.error) {
+      console.warn("Could not load parameter patterns config:", config.error);
+      // No fallback - parameter feature disabled if config fails
+      parameterPatterns = [];
+      if (callback) callback();
+      return;
+    }
+    
+    // Build exact match patterns from server configuration (simple names only)
+    parameterPatterns = [];
+    
+    // Add custom patterns (only exact matches)
+    if (config.parameter_patterns && config.parameter_patterns.custom) {
+      config.parameter_patterns.custom.forEach(function(pattern) {
+        // Simple name exact match only
+        parameterPatterns.push(new RegExp("^" + pattern + "$"));
+      });
+    }
+    
+    console.log("Loaded parameter patterns:", parameterPatterns.map(function(p) { return p.toString(); }));
+    if (callback) callback();
+  });
+}
+
 // Extract SQL parameters from URL and store globally
 function extractSqlParameters() {
   var urlParams = new URLSearchParams(window.location.search);
   var sqlParams = {};
   
-  // Define common SQL parameter patterns (matching backend patterns)
-  var paramPatterns = [/^gsr_\w+$/, /^tenant_\w+$/, /^user_\w+$/, /^client_\w+$/, /^app_\w+$/];
+  // Only use configured patterns - no fallback
+  if (parameterPatterns.length === 0) {
+    // Parameter feature disabled if no patterns configured
+    globalSqlParams = sqlParams;
+    return sqlParams;
+  }
   
   for (var pair of urlParams.entries()) {
     var key = pair[0];
     var value = pair[1];
     
-    // Check if this parameter matches SQL parameter patterns
-    for (var pattern of paramPatterns) {
+    // Check if this parameter matches configured patterns
+    for (var pattern of parameterPatterns) {
       if (pattern.test(key)) {
         sqlParams[key] = value;
         break;
@@ -2178,8 +2211,11 @@ $(document).ready(function() {
     window.history.pushState({}, document.title, window.location.pathname);
   }
 
-  // Display URL parameters for query substitution
-  displayURLParameters();
+  // Load parameter patterns configuration first, then initialize
+  loadParameterPatterns(function() {
+    // Display URL parameters for query substitution after patterns are loaded
+    displayURLParameters();
+  });
 
   getInfo(function(resp) {
     if (resp.error) {
