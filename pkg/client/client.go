@@ -599,7 +599,7 @@ func (client *Client) TableInfo(table string) (*Result, error) {
 
 	if client.serverType == cockroachType {
 		result, err := client.query(statements.TableInfoCockroach)
-		if err == nil {
+		if err == nil && MetadataCache != nil {
 			MetadataCache.Set(cacheKey, result, 10*time.Minute)
 		}
 		return result, err
@@ -622,7 +622,9 @@ func (client *Client) TableInfo(table string) (*Result, error) {
 				{"N/A", "N/A", "N/A", "Unknown", true},
 			},
 		}
-		MetadataCache.Set(cacheKey, result, 10*time.Minute)
+		if MetadataCache != nil {
+			MetadataCache.Set(cacheKey, result, 10*time.Minute)
+		}
 		return result, nil
 	}
 
@@ -645,7 +647,7 @@ func (client *Client) TableIndexes(table string) (*Result, error) {
 	}
 
 	res, err := client.query(statements.TableIndexes, schema, tableName)
-	if err == nil {
+	if err == nil && MetadataCache != nil {
 		MetadataCache.Set(cacheKey, res, 10*time.Minute)
 	}
 
@@ -663,7 +665,7 @@ func (client *Client) TableConstraints(table string) (*Result, error) {
 	}
 
 	res, err := client.query(statements.TableConstraints, schema, tableName)
-	if err == nil {
+	if err == nil && MetadataCache != nil {
 		MetadataCache.Set(cacheKey, res, 10*time.Minute)
 	}
 
