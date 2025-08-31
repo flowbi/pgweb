@@ -159,21 +159,6 @@ func (client *Client) generateMetadataCacheKey(queryType string, params ...strin
 	return fmt.Sprintf("metadata:%x", hash)
 }
 
-// getFromMetadataCache tries to get a value from the metadata cache
-func (client *Client) getFromMetadataCache(cacheKey string) (interface{}, bool) {
-	if command.Opts.DisableMetadataCache || MetadataCache == nil {
-		return nil, false
-	}
-	return MetadataCache.Get(cacheKey)
-}
-
-// setToMetadataCache sets a value in the metadata cache
-func (client *Client) setToMetadataCache(cacheKey string, value interface{}) {
-	if !command.Opts.DisableMetadataCache && MetadataCache != nil {
-		MetadataCache.Set(cacheKey, value, time.Duration(command.Opts.MetadataCacheTTL)*time.Second)
-	}
-}
-
 func getSchemaAndTable(str string) (string, string) {
 	chunks := strings.Split(str, ".")
 	if len(chunks) == 1 {

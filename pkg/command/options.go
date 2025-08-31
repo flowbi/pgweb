@@ -74,7 +74,7 @@ type Options struct {
 	GoogleFonts                  string `long:"google-fonts" description:"Comma-separated list of Google Fonts to preload (e.g., 'Inter:300,400,500,700')"`
 	DisableQueryCache            bool   `long:"no-query-cache" description:"Disable query result caching"`
 	DisableMetadataCache         bool   `long:"no-metadata-cache" description:"Disable metadata caching"`
-	QueryCacheTTL                uint   `long:"query-cache-ttl" description:"Query cache TTL in seconds" default:"120"`
+	QueryCacheTTL                uint   `long:"query-cache-ttl" description:"Query cache TTL in seconds" default:"300"`
 	MetadataCacheTTL             uint   `long:"metadata-cache-ttl" description:"Metadata cache TTL in seconds" default:"600"`
 }
 
