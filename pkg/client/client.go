@@ -365,8 +365,10 @@ func (client *Client) TestWithTimeout(timeout time.Duration) (result error) {
 
 func (client *Client) Info() (*Result, error) {
 	cacheKey := client.generateMetadataCacheKey("info")
-	if cached, found := MetadataCache.Get(cacheKey); found {
-		return cached.(*Result), nil
+	if MetadataCache != nil {
+		if cached, found := MetadataCache.Get(cacheKey); found {
+			return cached.(*Result), nil
+		}
 	}
 
 	result, err := client.query(statements.Info)
@@ -378,7 +380,7 @@ func (client *Client) Info() (*Result, error) {
 		}
 	}
 
-	if err == nil {
+	if err == nil && MetadataCache != nil {
 		MetadataCache.Set(cacheKey, result, 10*time.Minute)
 	}
 
@@ -391,8 +393,10 @@ func (client *Client) Databases() ([]string, error) {
 
 func (client *Client) Schemas() ([]string, error) {
 	cacheKey := client.generateMetadataCacheKey("schemas", command.Opts.HideSchemas)
-	if cached, found := MetadataCache.Get(cacheKey); found {
-		return cached.([]string), nil
+	if MetadataCache != nil {
+		if cached, found := MetadataCache.Get(cacheKey); found {
+			return cached.([]string), nil
+		}
 	}
 
 	schemas, err := client.fetchRows(statements.Schemas)
@@ -407,15 +411,19 @@ func (client *Client) Schemas() ([]string, error) {
 	}
 
 	filteredSchemas := FilterStringSlice(schemas, patterns)
-	MetadataCache.Set(cacheKey, filteredSchemas, 10*time.Minute)
+	if MetadataCache != nil {
+		MetadataCache.Set(cacheKey, filteredSchemas, 10*time.Minute)
+	}
 
 	return filteredSchemas, nil
 }
 
 func (client *Client) Objects() (*Result, error) {
 	cacheKey := client.generateMetadataCacheKey("objects", command.Opts.HideSchemas, command.Opts.HideObjects)
-	if cached, found := MetadataCache.Get(cacheKey); found {
-		return cached.(*Result), nil
+	if MetadataCache != nil {
+		if cached, found := MetadataCache.Get(cacheKey); found {
+			return cached.(*Result), nil
+		}
 	}
 
 	result, err := client.query(statements.Objects)
@@ -436,7 +444,9 @@ func (client *Client) Objects() (*Result, error) {
 	}
 
 	filteredResult := filterObjectsResult(result, schemaPatterns, objectPatterns)
-	MetadataCache.Set(cacheKey, filteredResult, 10*time.Minute)
+	if MetadataCache != nil {
+		MetadataCache.Set(cacheKey, filteredResult, 10*time.Minute)
+	}
 
 	return filteredResult, nil
 }
@@ -445,12 +455,14 @@ func (client *Client) Table(table string) (*Result, error) {
 	schema, tableName := getSchemaAndTable(table)
 	cacheKey := client.generateMetadataCacheKey("table", schema, tableName)
 
-	if cached, found := MetadataCache.Get(cacheKey); found {
-		return cached.(*Result), nil
+	if MetadataCache != nil {
+		if cached, found := MetadataCache.Get(cacheKey); found {
+			return cached.(*Result), nil
+		}
 	}
 
 	result, err := client.query(statements.TableSchema, schema, tableName)
-	if err == nil {
+	if err == nil && MetadataCache != nil {
 		MetadataCache.Set(cacheKey, result, 10*time.Minute)
 	}
 
@@ -579,8 +591,10 @@ func (client *Client) TableInfo(table string) (*Result, error) {
 	schema, tableName := getSchemaAndTable(table)
 	cacheKey := client.generateMetadataCacheKey("table_info", schema, tableName, client.serverType)
 
-	if cached, found := MetadataCache.Get(cacheKey); found {
-		return cached.(*Result), nil
+	if MetadataCache != nil {
+		if cached, found := MetadataCache.Get(cacheKey); found {
+			return cached.(*Result), nil
+		}
 	}
 
 	if client.serverType == cockroachType {
@@ -613,7 +627,7 @@ func (client *Client) TableInfo(table string) (*Result, error) {
 	}
 
 	result, err := client.query(statements.TableInfo, fmt.Sprintf(`"%s"."%s"`, schema, tableName))
-	if err == nil {
+	if err == nil && MetadataCache != nil {
 		MetadataCache.Set(cacheKey, result, 10*time.Minute)
 	}
 
@@ -624,8 +638,10 @@ func (client *Client) TableIndexes(table string) (*Result, error) {
 	schema, tableName := getSchemaAndTable(table)
 	cacheKey := client.generateMetadataCacheKey("table_indexes", schema, tableName)
 
-	if cached, found := MetadataCache.Get(cacheKey); found {
-		return cached.(*Result), nil
+	if MetadataCache != nil {
+		if cached, found := MetadataCache.Get(cacheKey); found {
+			return cached.(*Result), nil
+		}
 	}
 
 	res, err := client.query(statements.TableIndexes, schema, tableName)
@@ -640,8 +656,10 @@ func (client *Client) TableConstraints(table string) (*Result, error) {
 	schema, tableName := getSchemaAndTable(table)
 	cacheKey := client.generateMetadataCacheKey("table_constraints", schema, tableName)
 
-	if cached, found := MetadataCache.Get(cacheKey); found {
-		return cached.(*Result), nil
+	if MetadataCache != nil {
+		if cached, found := MetadataCache.Get(cacheKey); found {
+			return cached.(*Result), nil
+		}
 	}
 
 	res, err := client.query(statements.TableConstraints, schema, tableName)
