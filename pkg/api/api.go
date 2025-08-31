@@ -2,11 +2,13 @@ package api
 
 import (
 	"context"
+	"crypto/md5"
 	"encoding/base64"
 	"fmt"
 	"net/http"
 	neturl "net/url"
 	"os"
+	"regexp"
 	"strings"
 	"time"
 
@@ -14,6 +16,7 @@ import (
 	"github.com/tuvistavie/securerandom"
 
 	"github.com/flowbi/pgweb/pkg/bookmarks"
+	"github.com/flowbi/pgweb/pkg/cache"
 	"github.com/flowbi/pgweb/pkg/client"
 	"github.com/flowbi/pgweb/pkg/command"
 	"github.com/flowbi/pgweb/pkg/connection"
@@ -32,7 +35,29 @@ var (
 
 	// QueryStore reads the SQL queries stores in the home directory
 	QueryStore *queries.Store
+
+	// QueryCache caches query results
+	QueryCache *cache.Cache
+
+	// MetadataCache caches database metadata
+	MetadataCache *cache.Cache
 )
+
+var (
+	// Regex to identify SELECT queries that are safe to cache
+	selectQueryRegex = regexp.MustCompile(`(?i)^\s*SELECT\s+`)
+)
+
+func InitializeCaches() {
+	if !command.Opts.DisableQueryCache {
+		// Use memory-based cache limiting (50MB default) for better resource control
+		// This handles both large result sets and many small queries
+		QueryCache = cache.NewWithMemoryLimit(time.Duration(command.Opts.QueryCacheTTL)*time.Second, 50)
+	}
+	if !command.Opts.DisableMetadataCache {
+		MetadataCache = cache.New(time.Duration(command.Opts.MetadataCacheTTL) * time.Second)
+	}
+}
 
 // DB returns a database connection from the client context
 func DB(c *gin.Context) *client.Client {
@@ -565,24 +590,15 @@ func GetTablesStats(c *gin.Context) {
 	}
 }
 
-// HandleQuery runs the database query
-func HandleQuery(query string, c *gin.Context) {
-	metrics.IncrementQueriesCount()
+// CachedResponse represents a cached final response
+type CachedResponse struct {
+	Result *client.Result `json:"result"`
+	Format string         `json:"format"`
+}
 
-	rawQuery, err := base64.StdEncoding.DecodeString(desanitize64(query))
-	if err == nil {
-		query = string(rawQuery)
-	}
-
-	result, err := DB(c).Query(query)
-	if err != nil {
-		badRequest(c, err)
-		return
-	}
-
-	format := getQueryParam(c, "format")
+// handleFormatResponse serves the result in the requested format
+func handleFormatResponse(c *gin.Context, result *client.Result, format string) {
 	filename := getQueryParam(c, "filename")
-
 	if filename == "" {
 		filename = fmt.Sprintf("pgweb-%v.%v", time.Now().Unix(), format)
 	}
@@ -601,6 +617,103 @@ func HandleQuery(query string, c *gin.Context) {
 	default:
 		c.JSON(200, result)
 	}
+}
+
+// generateQueryCacheKey creates a cache key for query results
+func generateQueryCacheKey(query, connectionString, role string) string {
+	data := fmt.Sprintf("%s|%s|role:%s", query, connectionString, role)
+	hash := md5.Sum([]byte(data))
+	return fmt.Sprintf("query:%x", hash)
+}
+
+// isCacheableQuery checks if a query is safe to cache
+func isCacheableQuery(query string) bool {
+	trimmed := strings.TrimSpace(query)
+	return selectQueryRegex.MatchString(trimmed) &&
+		!strings.Contains(strings.ToLower(trimmed), "now()") &&
+		!strings.Contains(strings.ToLower(trimmed), "current_timestamp") &&
+		!strings.Contains(strings.ToLower(trimmed), "random()")
+}
+
+// HandleQuery runs the database query
+func HandleQuery(query string, c *gin.Context) {
+	metrics.IncrementQueriesCount()
+
+	// Only attempt base64 decoding for GET requests (URL parameters)
+	// POST requests have plain text queries in form data
+	if c.Request.Method == "GET" {
+		rawQuery, err := base64.StdEncoding.DecodeString(desanitize64(query))
+		if err == nil {
+			query = string(rawQuery)
+		} else {
+			if command.Opts.Debug {
+				fmt.Printf("[DEBUG] Base64 decode failed for GET query parameter: %q, error: %v\n", query, err)
+			}
+		}
+	}
+
+	// Check cache for SELECT queries
+	conn := DB(c)
+	if conn == nil {
+		badRequest(c, errNotConnected)
+		return
+	}
+
+	format := getQueryParam(c, "format")
+
+	// Check cache first
+	if !command.Opts.DisableQueryCache && QueryCache != nil && isCacheableQuery(query) {
+		cacheKey := generateQueryCacheKey(query, conn.ConnectionString, conn.GetRole())
+		if cached, found := QueryCache.Get(cacheKey); found {
+			// Return cached final response (already processed)
+			if cachedResp, ok := cached.(*CachedResponse); ok {
+				if command.Opts.Debug {
+					fmt.Printf("[CACHE] Query cache HIT for key: %s (rows: %d, role: %s) - returning final response\n",
+						cacheKey[6:16], len(cachedResp.Result.Rows), conn.GetRole())
+				}
+				// Update timing to reflect cache retrieval (1-2ms) instead of original query time
+				cacheTime := time.Now()
+				cachedResp.Result.Stats.QueryStartTime = cacheTime.Add(-time.Millisecond).UTC()
+				cachedResp.Result.Stats.QueryFinishTime = cacheTime.UTC()
+				cachedResp.Result.Stats.QueryDuration = 1 // 1ms for cache hit
+
+				// Serve cached result with proper format handling
+				handleFormatResponse(c, cachedResp.Result, cachedResp.Format)
+				return
+			} else {
+				if command.Opts.Debug {
+					fmt.Printf("[CACHE] Invalid cache entry, executing query\n")
+				}
+			}
+		}
+	}
+
+	// Execute query
+	result, err := conn.Query(query)
+	if err != nil {
+		badRequest(c, err)
+		return
+	}
+
+	// Post-process the result
+	result.PostProcess()
+
+	// Cache the final processed result
+	if !command.Opts.DisableQueryCache && QueryCache != nil && isCacheableQuery(query) && len(result.Rows) <= 10000 {
+		cacheKey := generateQueryCacheKey(query, conn.ConnectionString, conn.GetRole())
+		cachedResp := &CachedResponse{
+			Result: result,
+			Format: format,
+		}
+		QueryCache.Set(cacheKey, cachedResp, time.Duration(command.Opts.QueryCacheTTL)*time.Second)
+		if command.Opts.Debug {
+			fmt.Printf("[CACHE] Query cache MISS, cached final response for key: %s (rows: %d, TTL: %ds, role: %s)\n",
+				cacheKey[6:16], len(result.Rows), command.Opts.QueryCacheTTL, conn.GetRole())
+		}
+	}
+
+	// Serve the result with proper format handling
+	handleFormatResponse(c, result, format)
 }
 
 // GetBookmarks renders the list of available bookmarks
@@ -623,7 +736,7 @@ func GetInfo(c *gin.Context) {
 	})
 }
 
-// GetConfig returns client configuration including custom parameter patterns
+// GetConfig returns client configuration including custom parameter patterns and font settings
 func GetConfig(c *gin.Context) {
 	// Get custom parameter patterns from environment variable
 	customParams := os.Getenv("PGWEB_CUSTOM_PARAMS")
@@ -631,6 +744,11 @@ func GetConfig(c *gin.Context) {
 	config := gin.H{
 		"parameter_patterns": gin.H{
 			"custom": []string{},
+		},
+		"fonts": gin.H{
+			"family":       command.Opts.FontFamily,
+			"size":         command.Opts.FontSize,
+			"google_fonts": []string{},
 		},
 	}
 
@@ -641,6 +759,11 @@ func GetConfig(c *gin.Context) {
 			customPatternsList[i] = strings.TrimSpace(pattern)
 		}
 		config["parameter_patterns"].(gin.H)["custom"] = customPatternsList
+	}
+
+	// Add Google Fonts configuration
+	if command.Opts.GoogleFonts != "" {
+		config["fonts"].(gin.H)["google_fonts"] = command.Opts.GoogleFonts
 	}
 
 	successResponse(c, config)
@@ -767,4 +890,56 @@ func RunLocalQuery(c *gin.Context) {
 	}
 
 	HandleQuery(statement, c)
+}
+
+// GetCacheStats renders cache statistics
+func GetCacheStats(c *gin.Context) {
+	stats := map[string]interface{}{
+		"caching_enabled": map[string]bool{
+			"query_cache":    !command.Opts.DisableQueryCache,
+			"metadata_cache": !command.Opts.DisableMetadataCache,
+		},
+		"cache_ttl": map[string]uint{
+			"query_cache_ttl":    command.Opts.QueryCacheTTL,
+			"metadata_cache_ttl": command.Opts.MetadataCacheTTL,
+		},
+	}
+
+	if QueryCache != nil {
+		stats["query_cache"] = QueryCache.Stats()
+	}
+
+	if MetadataCache != nil {
+		stats["metadata_cache"] = MetadataCache.Stats()
+	}
+
+	successResponse(c, stats)
+}
+
+// ClearCache clears all cache entries
+func ClearCache(c *gin.Context) {
+	cleared := []string{}
+
+	if QueryCache != nil {
+		QueryCache.Clear()
+		cleared = append(cleared, "query_cache")
+	}
+
+	if MetadataCache != nil {
+		MetadataCache.Clear()
+		cleared = append(cleared, "metadata_cache")
+	}
+
+	if len(cleared) == 0 {
+		successResponse(c, gin.H{
+			"message": "No caches to clear (caching disabled)",
+			"cleared": cleared,
+		})
+		return
+	}
+
+	successResponse(c, gin.H{
+		"message": "Caches cleared successfully",
+		"cleared": cleared,
+	})
 }

@@ -296,6 +296,13 @@ func testClient(cl *client.Client, retryCount int, retryDelay time.Duration) (ab
 
 func Run() {
 	initOptions()
+
+	// Initialize caches after options are loaded
+	api.InitializeCaches()
+
+	// Set shared metadata cache reference in client package
+	client.MetadataCache = api.MetadataCache
+
 	initClient()
 
 	if api.DbClient != nil {

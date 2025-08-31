@@ -24,6 +24,7 @@ var filterOptions = {
   "not_null":   "IS NOT NULL"
 };
 
+
 function getLuminance(hex) {
   // Handle 3-digit hex colors
   if (hex.length === 4) {
@@ -126,6 +127,48 @@ function initializeTheme() {
       return tab.trim();
     });
     hideNavigationTabs(tabsToHide);
+  }
+}
+
+function initializeFontsFromConfig() {
+  apiCall('get', '/config/fonts', {}, function(data) {
+    if (data.family || data.size || data.google_fonts) {
+      var fontFamily = data.family || 'inherit';
+      var fontSize = data.size || 'inherit';
+      var googleFonts = data.google_fonts;
+      
+      // Load Google Fonts if specified
+      if (googleFonts) {
+        var link = document.createElement('link');
+        link.rel = 'stylesheet';
+        link.href = 'https://fonts.googleapis.com/css2?family=' + encodeURIComponent(googleFonts) + '&display=swap';
+        document.head.appendChild(link);
+        
+        // Wait for font to load before applying to editor
+        link.onload = function() {
+          applyFontsToEditor(fontFamily, fontSize);
+        };
+      } else {
+        // Apply fonts immediately if no Google Fonts to load
+        applyFontsToEditor(fontFamily, fontSize);
+      }
+      
+      // Apply font family and size to CSS variables immediately
+      document.documentElement.style.setProperty('--pgweb-font-family', fontFamily);
+      document.documentElement.style.setProperty('--pgweb-font-size', fontSize);
+    }
+  });
+}
+
+function applyFontsToEditor(fontFamily, fontSize) {
+  // Apply font to Ace editor if it exists and force layout refresh
+  if (typeof editor !== 'undefined' && editor) {
+    editor.setOptions({
+      fontFamily: fontFamily,
+      fontSize: fontSize
+    });
+    // Force editor to recalculate character widths
+    editor.resize(true);
   }
 }
 
@@ -1842,6 +1885,9 @@ function bindContentModalEvents() {
 $(document).ready(function() {
   // Initialize theme from URL parameters
   initializeTheme();
+  
+  // Initialize fonts from server configuration
+  initializeFontsFromConfig();
   
   bindInputResizeEvents();
   bindContentModalEvents();

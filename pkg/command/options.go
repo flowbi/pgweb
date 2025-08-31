@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/user"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"github.com/jackc/pgpassfile"
@@ -68,6 +69,13 @@ type Options struct {
 	MetricsAddr                  string `long:"metrics-addr" description:"Listen host and port for Prometheus metrics server"`
 	HideSchemas                  string `long:"hide-schemas" description:"Comma-separated list of regex patterns to hide schemas (e.g., 'public,meta')"`
 	HideObjects                  string `long:"hide-objects" description:"Comma-separated list of regex patterns to hide objects/tables (e.g., '^temp_,_backup$')"`
+	FontFamily                   string `long:"font-family" description:"CSS font family to use (e.g., 'Inter', 'Roboto', 'Space Grotesk')"`
+	FontSize                     string `long:"font-size" description:"CSS font size to use (e.g., '14px', '16px')" default:"14px"`
+	GoogleFonts                  string `long:"google-fonts" description:"Comma-separated list of Google Fonts to preload (e.g., 'Inter:300,400,500,700')"`
+	DisableQueryCache            bool   `long:"no-query-cache" description:"Disable query result caching"`
+	DisableMetadataCache         bool   `long:"no-metadata-cache" description:"Disable metadata caching"`
+	QueryCacheTTL                uint   `long:"query-cache-ttl" description:"Query cache TTL in seconds" default:"120"`
+	MetadataCacheTTL             uint   `long:"metadata-cache-ttl" description:"Metadata cache TTL in seconds" default:"600"`
 }
 
 var Opts Options
@@ -164,6 +172,45 @@ func ParseOptions(args []string) (Options, error) {
 		opts.HideObjects = getPrefixedEnvVar("HIDE_OBJECTS")
 	}
 
+	if opts.FontFamily == "" {
+		opts.FontFamily = getPrefixedEnvVar("FONT_FAMILY")
+	}
+
+	if opts.FontSize == "" || opts.FontSize == "14px" {
+		if envFontSize := getPrefixedEnvVar("FONT_SIZE"); envFontSize != "" {
+			opts.FontSize = envFontSize
+		}
+	}
+
+	if opts.GoogleFonts == "" {
+		opts.GoogleFonts = getPrefixedEnvVar("GOOGLE_FONTS")
+	}
+
+	// Cache configuration from environment variables
+	if envDisableQueryCache := getPrefixedEnvVar("DISABLE_QUERY_CACHE"); envDisableQueryCache != "" {
+		if envDisableQueryCache == "true" || envDisableQueryCache == "1" {
+			opts.DisableQueryCache = true
+		}
+	}
+
+	if envDisableMetadataCache := getPrefixedEnvVar("DISABLE_METADATA_CACHE"); envDisableMetadataCache != "" {
+		if envDisableMetadataCache == "true" || envDisableMetadataCache == "1" {
+			opts.DisableMetadataCache = true
+		}
+	}
+
+	if envQueryCacheTTL := getPrefixedEnvVar("QUERY_CACHE_TTL"); envQueryCacheTTL != "" {
+		if ttl, err := strconv.ParseUint(envQueryCacheTTL, 10, 32); err == nil {
+			opts.QueryCacheTTL = uint(ttl)
+		}
+	}
+
+	if envMetadataCacheTTL := getPrefixedEnvVar("METADATA_CACHE_TTL"); envMetadataCacheTTL != "" {
+		if ttl, err := strconv.ParseUint(envMetadataCacheTTL, 10, 32); err == nil {
+			opts.MetadataCacheTTL = uint(ttl)
+		}
+	}
+
 	if opts.ConnectBackend != "" {
 		if !opts.Sessions {
 			return opts, errors.New("--sessions flag must be set")
@@ -253,5 +300,8 @@ func AvailableEnvVars() string {
 		"  " + envVarPrefix + "AUTH_PASS     HTTP basic auth password",
 		"  " + envVarPrefix + "HIDE_SCHEMAS  Comma-separated regex patterns to hide schemas",
 		"  " + envVarPrefix + "HIDE_OBJECTS  Comma-separated regex patterns to hide objects/tables",
+		"  " + envVarPrefix + "FONT_FAMILY   CSS font family to use",
+		"  " + envVarPrefix + "FONT_SIZE     CSS font size to use (default: 14px)",
+		"  " + envVarPrefix + "GOOGLE_FONTS  Comma-separated list of Google Fonts to preload",
 	}, "\n")
 }
