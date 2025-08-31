@@ -2,6 +2,7 @@ package client
 
 import (
 	"context"
+	"crypto/md5"
 	"errors"
 	"fmt"
 	"log"
@@ -15,12 +16,16 @@ import (
 	_ "github.com/lib/pq"
 
 	"github.com/flowbi/pgweb/pkg/bookmarks"
+	"github.com/flowbi/pgweb/pkg/cache"
 	"github.com/flowbi/pgweb/pkg/command"
 	"github.com/flowbi/pgweb/pkg/connection"
 	"github.com/flowbi/pgweb/pkg/history"
 	"github.com/flowbi/pgweb/pkg/shared"
 	"github.com/flowbi/pgweb/pkg/statements"
 )
+
+// Shared metadata cache - will be set by API package
+var MetadataCache *cache.Cache
 
 var (
 	regexErrAuthFailed        = regexp.MustCompile(`(authentication failed|role "(.*)" does not exist)`)
@@ -144,6 +149,14 @@ type Client struct {
 	External         bool             `json:"external"`
 	History          []history.Record `json:"history"`
 	ConnectionString string           `json:"connection_string"`
+	// Remove per-client cache - we'll use shared cache instead
+}
+
+// generateMetadataCacheKey creates a cache key for metadata queries
+func (client *Client) generateMetadataCacheKey(queryType string, params ...string) string {
+	data := fmt.Sprintf("%s|%s|%s", client.ConnectionString, queryType, strings.Join(params, "|"))
+	hash := md5.Sum([]byte(data))
+	return fmt.Sprintf("metadata:%x", hash)
 }
 
 func getSchemaAndTable(str string) (string, string) {
@@ -351,6 +364,13 @@ func (client *Client) TestWithTimeout(timeout time.Duration) (result error) {
 }
 
 func (client *Client) Info() (*Result, error) {
+	cacheKey := client.generateMetadataCacheKey("info")
+	if MetadataCache != nil {
+		if cached, found := MetadataCache.Get(cacheKey); found {
+			return cached.(*Result), nil
+		}
+	}
+
 	result, err := client.query(statements.Info)
 	if err != nil {
 		msg := err.Error()
@@ -359,6 +379,11 @@ func (client *Client) Info() (*Result, error) {
 			result, err = client.query(statements.InfoSimple)
 		}
 	}
+
+	if err == nil && MetadataCache != nil {
+		MetadataCache.Set(cacheKey, result, 10*time.Minute)
+	}
+
 	return result, err
 }
 
@@ -367,6 +392,13 @@ func (client *Client) Databases() ([]string, error) {
 }
 
 func (client *Client) Schemas() ([]string, error) {
+	cacheKey := client.generateMetadataCacheKey("schemas", command.Opts.HideSchemas)
+	if MetadataCache != nil {
+		if cached, found := MetadataCache.Get(cacheKey); found {
+			return cached.([]string), nil
+		}
+	}
+
 	schemas, err := client.fetchRows(statements.Schemas)
 	if err != nil {
 		return nil, err
@@ -378,10 +410,22 @@ func (client *Client) Schemas() ([]string, error) {
 		return nil, fmt.Errorf("failed to compile schema hide patterns: %v", err)
 	}
 
-	return FilterStringSlice(schemas, patterns), nil
+	filteredSchemas := FilterStringSlice(schemas, patterns)
+	if MetadataCache != nil {
+		MetadataCache.Set(cacheKey, filteredSchemas, 10*time.Minute)
+	}
+
+	return filteredSchemas, nil
 }
 
 func (client *Client) Objects() (*Result, error) {
+	cacheKey := client.generateMetadataCacheKey("objects", command.Opts.HideSchemas, command.Opts.HideObjects)
+	if MetadataCache != nil {
+		if cached, found := MetadataCache.Get(cacheKey); found {
+			return cached.(*Result), nil
+		}
+	}
+
 	result, err := client.query(statements.Objects)
 	if err != nil {
 		return nil, err
@@ -399,12 +443,30 @@ func (client *Client) Objects() (*Result, error) {
 		return nil, fmt.Errorf("failed to compile object hide patterns: %v", err)
 	}
 
-	return filterObjectsResult(result, schemaPatterns, objectPatterns), nil
+	filteredResult := filterObjectsResult(result, schemaPatterns, objectPatterns)
+	if MetadataCache != nil {
+		MetadataCache.Set(cacheKey, filteredResult, 10*time.Minute)
+	}
+
+	return filteredResult, nil
 }
 
 func (client *Client) Table(table string) (*Result, error) {
-	schema, table := getSchemaAndTable(table)
-	return client.query(statements.TableSchema, schema, table)
+	schema, tableName := getSchemaAndTable(table)
+	cacheKey := client.generateMetadataCacheKey("table", schema, tableName)
+
+	if MetadataCache != nil {
+		if cached, found := MetadataCache.Get(cacheKey); found {
+			return cached.(*Result), nil
+		}
+	}
+
+	result, err := client.query(statements.TableSchema, schema, tableName)
+	if err == nil && MetadataCache != nil {
+		MetadataCache.Set(cacheKey, result, 10*time.Minute)
+	}
+
+	return result, err
 }
 
 func (client *Client) MaterializedView(name string) (*Result, error) {
@@ -526,11 +588,22 @@ func (client *Client) TableRowsCount(table string, opts RowsOptions) (*Result, e
 }
 
 func (client *Client) TableInfo(table string) (*Result, error) {
-	if client.serverType == cockroachType {
-		return client.query(statements.TableInfoCockroach)
+	schema, tableName := getSchemaAndTable(table)
+	cacheKey := client.generateMetadataCacheKey("table_info", schema, tableName, client.serverType)
+
+	if MetadataCache != nil {
+		if cached, found := MetadataCache.Get(cacheKey); found {
+			return cached.(*Result), nil
+		}
 	}
 
-	schema, tableName := getSchemaAndTable(table)
+	if client.serverType == cockroachType {
+		result, err := client.query(statements.TableInfoCockroach)
+		if err == nil && MetadataCache != nil {
+			MetadataCache.Set(cacheKey, result, 10*time.Minute)
+		}
+		return result, err
+	}
 
 	// Check if this is a foreign table
 	isForeign, err := client.isForeignTable(schema, tableName)
@@ -549,29 +622,51 @@ func (client *Client) TableInfo(table string) (*Result, error) {
 				{"N/A", "N/A", "N/A", "Unknown", true},
 			},
 		}
+		if MetadataCache != nil {
+			MetadataCache.Set(cacheKey, result, 10*time.Minute)
+		}
 		return result, nil
 	}
 
-	return client.query(statements.TableInfo, fmt.Sprintf(`"%s"."%s"`, schema, tableName))
+	result, err := client.query(statements.TableInfo, fmt.Sprintf(`"%s"."%s"`, schema, tableName))
+	if err == nil && MetadataCache != nil {
+		MetadataCache.Set(cacheKey, result, 10*time.Minute)
+	}
+
+	return result, err
 }
 
 func (client *Client) TableIndexes(table string) (*Result, error) {
-	schema, table := getSchemaAndTable(table)
-	res, err := client.query(statements.TableIndexes, schema, table)
+	schema, tableName := getSchemaAndTable(table)
+	cacheKey := client.generateMetadataCacheKey("table_indexes", schema, tableName)
 
-	if err != nil {
-		return nil, err
+	if MetadataCache != nil {
+		if cached, found := MetadataCache.Get(cacheKey); found {
+			return cached.(*Result), nil
+		}
+	}
+
+	res, err := client.query(statements.TableIndexes, schema, tableName)
+	if err == nil && MetadataCache != nil {
+		MetadataCache.Set(cacheKey, res, 10*time.Minute)
 	}
 
 	return res, err
 }
 
 func (client *Client) TableConstraints(table string) (*Result, error) {
-	schema, table := getSchemaAndTable(table)
-	res, err := client.query(statements.TableConstraints, schema, table)
+	schema, tableName := getSchemaAndTable(table)
+	cacheKey := client.generateMetadataCacheKey("table_constraints", schema, tableName)
 
-	if err != nil {
-		return nil, err
+	if MetadataCache != nil {
+		if cached, found := MetadataCache.Get(cacheKey); found {
+			return cached.(*Result), nil
+		}
+	}
+
+	res, err := client.query(statements.TableConstraints, schema, tableName)
+	if err == nil && MetadataCache != nil {
+		MetadataCache.Set(cacheKey, res, 10*time.Minute)
 	}
 
 	return res, err
@@ -879,6 +974,11 @@ func (client *Client) SetRole(role string) {
 	if role != "" && isValidRoleName(role) {
 		client.defaultRole = role
 	}
+}
+
+// GetRole returns the current role for the client
+func (client *Client) GetRole() string {
+	return client.defaultRole
 }
 
 // isValidRoleName validates that the role name matches expected pattern

@@ -5,6 +5,9 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"time"
+
+	"github.com/flowbi/pgweb/pkg/cache"
 )
 
 var (
@@ -65,18 +68,49 @@ var (
 		"9.5":     "SELECT datname, query, state, waiting, query_start, state_change, pid, datid, application_name, client_addr FROM pg_stat_activity WHERE datname = current_database() and usename = current_user",
 		"9.6":     "SELECT datname, query, state, wait_event, wait_event_type, query_start, state_change, pid, datid, application_name, client_addr FROM pg_stat_activity WHERE datname = current_database() and usename = current_user",
 	}
+
+	// Cache for external SQL files
+	sqlFileCache *cache.Cache
 )
 
 func init() {
+	sqlFileCache = cache.New(30 * time.Minute)
 	TableConstraints = loadTableConstraintsSQL()
 }
 
 func loadTableConstraintsSQL() string {
 	externalPath := filepath.Join("/tmp/queries", "table_constraints.sql")
-	if data, err := os.ReadFile(externalPath); err == nil {
-		log.Printf("Using external table_constraints.sql from: %s", externalPath)
-		return string(data)
+
+	// Check cache first
+	cacheKey := cache.GenerateKey("sql_file", externalPath)
+	if cached, found := sqlFileCache.Get(cacheKey); found {
+		return cached.(string)
 	}
 
+	// Check if external file exists and get its mod time
+	if stat, err := os.Stat(externalPath); err == nil {
+		// Check if we have cached this file with its mod time
+		modTimeCacheKey := cache.GenerateKey("sql_file_modtime", externalPath, stat.ModTime().String())
+		if cached, found := sqlFileCache.Get(modTimeCacheKey); found {
+			// Cache the content with the general key as well
+			content := cached.(string)
+			sqlFileCache.Set(cacheKey, content, 30*time.Minute)
+			return content
+		}
+
+		// Read and cache the file
+		if data, err := os.ReadFile(externalPath); err == nil {
+			content := string(data)
+			log.Printf("Using external table_constraints.sql from: %s", externalPath)
+
+			// Cache with both keys
+			sqlFileCache.Set(cacheKey, content, 30*time.Minute)
+			sqlFileCache.Set(modTimeCacheKey, content, 30*time.Minute)
+			return content
+		}
+	}
+
+	// Cache the embedded fallback
+	sqlFileCache.Set(cacheKey, tableConstraintsEmbedded, 30*time.Minute)
 	return tableConstraintsEmbedded
 }

@@ -2,6 +2,16 @@
   --pgweb-primary-color: #79589f;
   --pgweb-primary-text-muted: #d6cce2;
   --pgweb-primary-text: #fff;
+  --pgweb-font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+  --pgweb-font-size: 14px;
+  --pgweb-mono-font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+}
+
+/* Base typography */
+body, html {
+  font-family: var(--pgweb-font-family);
+  font-size: var(--pgweb-font-size);
+  line-height: 1.4;
 }
 
 /* Tab hiding support */
