@@ -1,6 +1,58 @@
 ## Changelog
 
-Current [release](https://github.com/flowbi/pgweb/releases) is `0.16.5`.
+Current [release](https://github.com/flowbi/pgweb/releases) is `0.16.14`.
+
+## 0.16.14 - 2025-09-01
+
+- `NEW` Enable font customization
+- `NEW` Implement in-memory query caching to improve performance
+
+## 0.16.13 - 2025-08-31
+
+- `NEW` Introduce configuration of custom parameter during server configuration
+- `NEW` Optimized local dev setup for testing through docker-compose.dev
+- `NEW` Implement Runtime Query File Replacement for custom constraints
+- `NEW` Implement Flow.bi custom constraints query with safe fallback to standard PostgreSQL constraints
+- `FIX` Update ace-pgsql.js SQL keyword highlighting
+
+## 0.16.12 - 2025-08-30
+
+- `FIX` Update Font Awesome link to use CDN for resolving font issue
+
+## 0.16.11 - 2025-08-29
+
+- `FIX` Update Font Awesome font relative paths in CSS to absolute
+- `FIX` Enhance parameter overlay management
+- `FIX` 'hideParamIndicator' in URL and hide overlay in tabs other than Query
+
+## 0.16.10 - 2025-08-28
+
+- `NEW` Support @parameters in queries
+- `NEW` Streamline development setup with Docker, helper script and .env\* file
+- `FIX` Update CI workflow and remove obsolete test file
+
+## 0.16.9 - 2025-08-27
+
+- `NEW` Add an option to hide active parameter overlay
+
+## 0.16.8 - 2025-08-26
+
+- `NEW` Implement URL parameter substitution SQL queries for iframe embedding
+- `FIX` Fix formatting issues
+
+## 0.16.7 - 2025-08-25
+
+- `NEW` Add schema and object filtering options
+- `NEW` Add hyper link support
+- `FIX` Time out 504 error in /rows when selecting foreign table and hide table information from UI
+- `FIX` Update PostgreSQL version matrix in GitHub workflow
+- `FIX` Formatting issues
+
+## 0.16.6 - 2025-08-24
+
+- `FIX` Set CGO_ENABLED only for docker-build jobs and remove globally
+- `FIX` Update project references to flowbi
+- `FIX` Optimize GitHub Actions workflows to save on CI/CD time
 
 ## 0.16.5 - 2025-08-22
 
