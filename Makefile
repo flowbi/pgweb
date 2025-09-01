@@ -18,8 +18,7 @@ usage:
 	@echo "make dev             : Generate development build"
 	@echo "make build           : Generate production build for current OS"
 	@echo "make release         : Generate binaries for all supported OSes"
-	@echo "make test            : Execute test suite (smart detection)"
-	@echo "make test-quick      : Execute test suite (skip setup)"
+	@echo "make test            : Execute test suite"
 	@echo "make test-all        : Execute test suite on multiple PG versions"
 	@echo "make lint            : Execute code linter"
 	@echo "make clean           : Remove all build files and reset assets"
@@ -29,16 +28,7 @@ usage:
 	@echo ""
 
 test:
-	@echo "Running tests with smart environment detection..."
-	@./dev.sh test-smart
-
-test-setup:
-	@echo "Setting up test environment only..."
-	@./dev.sh test-setup
-
-test-quick:
-	@echo "Running tests (assuming environment is ready)..."
-	@./dev.sh test-quick
+	env -u PGWEB_DATABASE_URL go test -v -race -cover ./pkg/api ./pkg/bookmarks ./pkg/cache ./pkg/client ./pkg/command ./pkg/connection ./pkg/queries
 
 test-all:
 	@./script/test_all.sh

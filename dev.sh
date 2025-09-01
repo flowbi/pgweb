@@ -395,7 +395,9 @@ test_quick_internal() {
     local test_env="PATH=$pg_path:\$PATH PGHOST=$TEST_POSTGRES_HOST PGPORT=$TEST_POSTGRES_PORT PGUSER=$TEST_POSTGRES_USER PGPASSWORD=$TEST_POSTGRES_PASSWORD PGDATABASE=$TEST_DATABASE"
     
     echo_info "Running tests..."
-    eval "$test_env go test -v -race -cover ./pkg/..."
+    # Only test packages that have test files to avoid 0% coverage noise
+    local test_packages="./pkg/api ./pkg/bookmarks ./pkg/cache ./pkg/client ./pkg/command ./pkg/connection ./pkg/queries"
+    eval "$test_env go test -v -race -cover $test_packages"
 }
 
 # Quick test without setup (user-facing command)
