@@ -326,7 +326,7 @@ setup_test_environment() {
     # Check if postgres container is running
     if ! docker ps --format "table {{.Names}}" | grep -q "pgweb-postgres"; then
         echo_info "Starting PostgreSQL container..."
-        docker-compose -f docker-compose.dev.yml up -d postgres
+        docker compose -f docker compose.dev.yml up -d postgres
         
         # Wait for PostgreSQL to be ready
         echo_info "Waiting for PostgreSQL to be ready..."
@@ -414,9 +414,9 @@ validate_environment() {
         exit 1
     fi
     
-    # Check if docker-compose.dev.yml exists
-    if [[ ! -f "docker-compose.dev.yml" ]]; then
-        echo_error "docker-compose.dev.yml not found"
+    # Check if docker compose.dev.yml exists
+    if [[ ! -f "docker compose.dev.yml" ]]; then
+        echo_error "docker compose.dev.yml not found"
         exit 1
     fi
     
@@ -460,7 +460,7 @@ start_development() {
         echo_info "Encoded password: $encoded_masked"
         echo_info "SSL mode: $ssl_mode"
         
-        # Export for docker-compose
+        # Export for docker compose
         export DATABASE_URL
     else
         echo_info "Using local PostgreSQL container"
@@ -473,7 +473,7 @@ start_development() {
     fi
     
     # Start services
-    docker-compose -f docker-compose.dev.yml up -d --build
+    docker compose -f docker compose.dev.yml up -d --build
     
     echo_success "Services started!"
     echo_info "pgweb: http://localhost:8081"
@@ -492,15 +492,15 @@ start_development() {
 # Stop development environment
 stop_development() {
     echo_info "Stopping pgweb development environment..."
-    docker-compose -f docker-compose.dev.yml down
+    docker compose -f docker compose.dev.yml down
     echo_success "Services stopped!"
 }
 
 # Restart development environment
 restart_development() {
     echo_info "Restarting pgweb development environment..."
-    docker-compose -f docker-compose.dev.yml down
-    docker-compose -f docker-compose.dev.yml up -d --build
+    docker compose -f docker compose.dev.yml down
+    docker compose -f docker compose.dev.yml up -d --build
     echo_success "Services restarted!"
 }
 
@@ -508,7 +508,7 @@ restart_development() {
 show_logs() {
     local service="${1:-}"
     echo_info "Showing logs..."
-    docker-compose -f docker-compose.dev.yml logs -f $service
+    docker compose -f docker compose.dev.yml logs -f $service
 }
 
 # Clean up environment
@@ -517,7 +517,7 @@ clean_environment() {
     read -p "Are you sure? (y/N): " -n 1 -r
     echo
     if [[ $REPLY =~ ^[Yy]$ ]]; then
-        docker-compose -f docker-compose.dev.yml down -v
+        docker compose -f docker compose.dev.yml down -v
         docker system prune -f
         echo_success "Cleanup complete!"
     else
@@ -583,9 +583,9 @@ main() {
             show_help
             ;;
         *)
-            # Pass through to docker-compose
+            # Pass through to docker compose
             validate_environment
-            docker-compose -f docker-compose.dev.yml "$command" "$@"
+            docker compose -f docker compose.dev.yml "$command" "$@"
             ;;
     esac
 }
@@ -606,7 +606,7 @@ while [[ $# -gt 0 ]]; do
             ;;
         --clean-deps)
             echo_info "Cleaning Docker volumes..."
-            docker-compose -f docker-compose.dev.yml down -v
+            docker compose -f docker compose.dev.yml down -v
             echo_success "Volumes cleaned!"
             exit 0
             ;;
