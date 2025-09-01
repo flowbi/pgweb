@@ -131,31 +131,41 @@ function initializeTheme() {
 }
 
 function initializeFontsFromConfig() {
-  apiCall('get', '/config/fonts', {}, function(data) {
-    if (data.family || data.size || data.google_fonts) {
-      var fontFamily = data.family || 'inherit';
-      var fontSize = data.size || 'inherit';
-      var googleFonts = data.google_fonts;
-      
-      // Load Google Fonts if specified
-      if (googleFonts) {
-        var link = document.createElement('link');
-        link.rel = 'stylesheet';
-        link.href = 'https://fonts.googleapis.com/css2?family=' + encodeURIComponent(googleFonts) + '&display=swap';
-        document.head.appendChild(link);
+  apiCall('get', '/config', {}, function(config) {
+    if (config && config.fonts) {
+      var data = config.fonts;
+      if (data.family || data.size || data.google_fonts) {
+        var fontFamily = data.family || 'inherit';
+        var fontSize = data.size || 'inherit';
+        var googleFonts = data.google_fonts;
         
-        // Wait for font to load before applying to editor
-        link.onload = function() {
+        // Load Google Fonts if specified
+        if (googleFonts) {
+          // Convert "Space Grotesk:300,400,500,600,700" to Google Fonts API v2 format
+          var fontParts = googleFonts.split(':');
+          var fontName = fontParts[0];
+          var weights = fontParts[1] ? fontParts[1].split(',').join(';') : '400';
+          var googleFontsUrl = 'https://fonts.googleapis.com/css2?family=' + 
+                               encodeURIComponent(fontName) + ':wght@' + weights + '&display=swap';
+          
+          var link = document.createElement('link');
+          link.rel = 'stylesheet';
+          link.href = googleFontsUrl;
+          document.head.appendChild(link);
+          
+          // Wait for font to load before applying to editor
+          link.onload = function() {
+            applyFontsToEditor(fontFamily, fontSize);
+          };
+        } else {
+          // Apply fonts immediately if no Google Fonts to load
           applyFontsToEditor(fontFamily, fontSize);
-        };
-      } else {
-        // Apply fonts immediately if no Google Fonts to load
-        applyFontsToEditor(fontFamily, fontSize);
+        }
+        
+        // Apply font family and size to CSS variables immediately
+        document.documentElement.style.setProperty('--pgweb-font-family', fontFamily);
+        document.documentElement.style.setProperty('--pgweb-font-size', fontSize);
       }
-      
-      // Apply font family and size to CSS variables immediately
-      document.documentElement.style.setProperty('--pgweb-font-family', fontFamily);
-      document.documentElement.style.setProperty('--pgweb-font-size', fontSize);
     }
   });
 }

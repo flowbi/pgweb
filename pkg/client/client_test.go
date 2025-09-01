@@ -100,6 +100,16 @@ func onWindows() bool {
 	return runtime.GOOS == "windows"
 }
 
+func postgresqlToolsAvailable() bool {
+	tools := []string{"createdb", "psql", "dropdb"}
+	for _, tool := range tools {
+		if _, err := exec.LookPath(tool); err != nil {
+			return false
+		}
+	}
+	return true
+}
+
 func setup() {
 	// No pretty JSON for tests
 	command.Opts.DisablePrettyJSON = true
@@ -746,6 +756,12 @@ func testServerSettings(t *testing.T) {
 func TestAll(t *testing.T) {
 	if onWindows() {
 		t.Log("Unit testing on Windows platform is not supported.")
+		return
+	}
+
+	// Check if PostgreSQL tools are available
+	if !postgresqlToolsAvailable() {
+		t.Log("Unit testing requires PostgreSQL client tools (createdb, psql, dropdb) to be available in PATH.")
 		return
 	}
 

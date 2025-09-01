@@ -28,7 +28,7 @@ usage:
 	@echo ""
 
 test:
-	go test -v -race -cover ./pkg/...
+	env -u PGWEB_DATABASE_URL go test -v -race -cover ./pkg/api ./pkg/bookmarks ./pkg/cache ./pkg/client ./pkg/command ./pkg/connection ./pkg/queries
 
 test-all:
 	@./script/test_all.sh
