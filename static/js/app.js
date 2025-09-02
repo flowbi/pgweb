@@ -139,7 +139,7 @@ function initializeFontsFromConfig() {
         var fontSize = data.size || 'inherit';
         var googleFonts = data.google_fonts;
         
-        // Load Google Fonts if specified
+        // Load Google Fonts if specified (for UI elements only)
         if (googleFonts) {
           // Convert "Space Grotesk:300,400,500,600,700" to Google Fonts API v2 format
           var fontParts = googleFonts.split(':');
@@ -152,32 +152,36 @@ function initializeFontsFromConfig() {
           link.rel = 'stylesheet';
           link.href = googleFontsUrl;
           document.head.appendChild(link);
-          
-          // Wait for font to load before applying to editor
-          link.onload = function() {
-            applyFontsToEditor(fontFamily, fontSize);
-          };
-        } else {
-          // Apply fonts immediately if no Google Fonts to load
-          applyFontsToEditor(fontFamily, fontSize);
         }
         
-        // Apply font family and size to CSS variables immediately
-        document.documentElement.style.setProperty('--pgweb-font-family', fontFamily);
-        document.documentElement.style.setProperty('--pgweb-font-size', fontSize);
+        // Apply fonts immediately - ACE editor will use monospace regardless
+        applyFontsGlobally(fontFamily, fontSize);
       }
     }
   });
 }
 
+
+function applyFontsGlobally(fontFamily, fontSize) {
+  // Apply font family and size to CSS variables for UI elements
+  document.documentElement.style.setProperty('--pgweb-font-family', fontFamily);
+  document.documentElement.style.setProperty('--pgweb-font-size', fontSize);
+  
+  // Apply font size to ACE editor (but keep monospace family)
+  applyFontsToEditor(fontFamily, fontSize);
+}
+
+
 function applyFontsToEditor(fontFamily, fontSize) {
-  // Apply font to Ace editor if it exists and force layout refresh
+  // ACE editor must always use monospace fonts for correct cursor positioning
+  // Don't apply proportional fonts to ACE - it breaks cursor alignment
   if (typeof editor !== 'undefined' && editor) {
     editor.setOptions({
-      fontFamily: fontFamily,
-      fontSize: fontSize
+      // Always use monospace fonts for ACE editor
+      fontFamily: 'Monaco, Menlo, Ubuntu Mono, monospace',
+      fontSize: fontSize  // Size can be customized, but keep monospace family
     });
-    // Force editor to recalculate character widths
+    // Force editor to recalculate character widths after any font changes
     editor.resize(true);
   }
 }

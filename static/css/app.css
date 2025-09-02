@@ -731,6 +731,11 @@ body, html {
   height: 238px;
 }
 
+/* Ensure ACE editor always uses monospace fonts */
+.ace_editor, .ace_editor * {
+  font-family: var(--pgweb-mono-font-family) !important;
+}
+
 #connection_window {
   z-index: 3;
   position: fixed;
