@@ -749,13 +749,31 @@ body, html {
 }
 
 .connection-actions {
-  position: fixed;
+  position: absolute;
   right: 8px;
   top: 10px;
   display: none;
 }
 
+.parameter-toggle-action {
+  position: absolute;
+  right: 8px;
+  top: 10px;
+  display: none;
+}
+
+/* When both are visible, shift parameter toggle to the left */
+.connection-actions:not([style*="display: none"]) ~ .parameter-toggle-action {
+  right: 200px;
+}
+
 #edit_connection, #close_connection {
+  background: var(--pgweb-primary-color);
+  color: var(--pgweb-primary-text);
+  border-color: var(--pgweb-primary-text);
+}
+
+#toggle_param_overlay {
   background: var(--pgweb-primary-color);
   color: var(--pgweb-primary-text);
   border-color: var(--pgweb-primary-text);

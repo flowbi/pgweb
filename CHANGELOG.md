@@ -1,6 +1,22 @@
 ## Changelog
 
-Current [release](https://github.com/flowbi/pgweb/releases) is `0.16.14`.
+Current [release](https://github.com/flowbi/pgweb/releases) is `0.16.17`.
+
+## 0.16.17 - 2025-11-23
+
+- `NEW` Add parameter overlay toggle button with localStorage persistence and responsive behavior
+- `NEW` Toggle automatically hides overlay when window width < 1400px
+- `FIX` Parameter overlay toggle button positioned to avoid overlap with connection buttons
+
+## 0.16.16 - 2025-11-23
+
+- `FIX` Unwanted gap between cursor and typed character in ACE editor
+
+## 0.16.15 - 2025-11-23
+
+- `NEW` Enhance development script and documentation for PostgreSQL setup
+- `FIX` Issue with custom fonts
+- `FIX` Docker compose file name and command in development script
 
 ## 0.16.14 - 2025-09-01
 
