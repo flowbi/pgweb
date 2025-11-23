@@ -792,10 +792,15 @@ function setCurrentTab(id) {
 
   // Persist tab selection into the session storage
   sessionStorage.setItem("tab", id);
-  
+
   // Update parameter overlay visibility based on new tab
   if (typeof updateParameterOverlay === 'function') {
     updateParameterOverlay(id);
+  }
+
+  // Update parameter toggle button visibility based on new tab
+  if (typeof updateParamToggleVisibility === 'function') {
+    updateParamToggleVisibility(id);
   }
 }
 
@@ -1408,6 +1413,62 @@ function addShortcutTooltips() {
 // Global variables for parameter overlay management
 var globalSqlParamsForOverlay = {};
 var shouldShowParamIndicator = false;
+var paramOverlayManuallySet = false; // Track if user manually toggled
+
+// Get parameter overlay preference from localStorage
+function getParamOverlayPreference() {
+  var pref = localStorage.getItem("param_overlay_enabled");
+  return pref === null ? null : pref === "true";
+}
+
+// Set parameter overlay preference to localStorage
+function setParamOverlayPreference(enabled) {
+  localStorage.setItem("param_overlay_enabled", enabled.toString());
+}
+
+// Check if screen width is >= 1400px
+function isWideScreen() {
+  return window.innerWidth >= 1400;
+}
+
+// Determine if overlay should be visible based on toggle state and screen size
+function shouldShowOverlay() {
+  var preference = getParamOverlayPreference();
+
+  // If user has set a preference, use it
+  if (preference !== null) {
+    return preference;
+  }
+
+  // Default: show on wide screens, hide on narrow screens
+  return isWideScreen();
+}
+
+// Update toggle button icon and overlay visibility
+function updateParamToggleState() {
+  var showOverlay = shouldShowOverlay();
+  var currentTab = $('#nav ul li.selected').attr('id') || 'table_query';
+
+  // Update toggle button icon
+  if (showOverlay) {
+    $('#toggle_param_overlay i').removeClass('fa-toggle-off').addClass('fa-toggle-on');
+  } else {
+    $('#toggle_param_overlay i').removeClass('fa-toggle-on').addClass('fa-toggle-off');
+  }
+
+  // Update overlay visibility based on toggle state
+  shouldShowParamIndicator = showOverlay && Object.keys(globalSqlParamsForOverlay).length > 0;
+  updateParameterOverlay(currentTab);
+}
+
+// Show/hide toggle button based on current tab
+function updateParamToggleVisibility(currentTabId) {
+  if (currentTabId === 'table_query' && Object.keys(globalSqlParamsForOverlay).length > 0) {
+    $('.parameter-toggle-action').show();
+  } else {
+    $('.parameter-toggle-action').hide();
+  }
+}
 
 function updateParameterOverlay(currentTabId) {
   // Remove existing indicator
@@ -1429,24 +1490,23 @@ function updateParameterOverlay(currentTabId) {
 
 function displayURLParameters() {
   var urlParams = new URLSearchParams(window.location.search);
-  var hideIndicator = urlParams.get('hideParamIndicator') === 'true';
 
   // Extract SQL parameters and store them globally (always do this for substitution to work)
   var sqlParams = extractSqlParameters();
   var hasParams = Object.keys(sqlParams).length > 0;
 
-  // Store parameters and indicator preference globally
+  // Store parameters globally
   globalSqlParamsForOverlay = sqlParams;
-  shouldShowParamIndicator = hasParams && !hideIndicator;
-  
-  // Show overlay for current tab (will be managed by setCurrentTab from now on)
-  if (shouldShowParamIndicator) {
-    var currentTab = $('#nav ul li.selected').attr('id') || 'table_query';
-    updateParameterOverlay(currentTab);
-  }
-  
+
   if (hasParams) {
     console.log('URL parameters available for query substitution:', sqlParams);
+
+    // Initialize toggle state and overlay visibility
+    updateParamToggleState();
+
+    // Show toggle button if on query tab
+    var currentTab = $('#nav ul li.selected').attr('id') || 'table_query';
+    updateParamToggleVisibility(currentTab);
   }
 }
 
@@ -2261,6 +2321,39 @@ $(document).ready(function() {
   initEditor();
   addShortcutTooltips();
   bindDatabaseObjectsFilter();
+
+  // Parameter overlay toggle button click handler
+  $("#toggle_param_overlay").on("click", function(e) {
+    e.preventDefault();
+
+    // Toggle the preference
+    var currentPreference = shouldShowOverlay();
+    var newPreference = !currentPreference;
+
+    // Save to localStorage
+    setParamOverlayPreference(newPreference);
+
+    // Update toggle state and overlay visibility
+    updateParamToggleState();
+  });
+
+  // Window resize handler for responsive behavior
+  $(window).on("resize", function() {
+    // Only update if there are parameters
+    if (Object.keys(globalSqlParamsForOverlay).length > 0) {
+      var preference = getParamOverlayPreference();
+
+      // If preference is set to ON but screen is now narrow, turn it OFF
+      if (preference && !isWideScreen()) {
+        setParamOverlayPreference(false);
+        updateParamToggleState();
+      }
+      // If no preference is set (null), update based on screen size
+      else if (preference === null) {
+        updateParamToggleState();
+      }
+    }
+  });
 
   // Set session from the url
   var reqUrl = new URL(window.location);
