@@ -748,13 +748,6 @@ body, html {
   overflow-y: auto;
 }
 
-.connection-actions {
-  position: absolute;
-  right: 8px;
-  top: 10px;
-  display: none;
-}
-
 .parameter-toggle-action {
   position: absolute;
   right: 8px;
@@ -762,9 +755,11 @@ body, html {
   display: none;
 }
 
-/* When both are visible, shift parameter toggle to the left */
-.connection-actions:not([style*="display: none"]) ~ .parameter-toggle-action {
-  right: 200px;
+.connection-actions {
+  position: absolute;
+  right: 50px;
+  top: 10px;
+  display: none;
 }
 
 #edit_connection, #close_connection {

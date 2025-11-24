@@ -1,6 +1,11 @@
 ## Changelog
 
-Current [release](https://github.com/flowbi/pgweb/releases) is `0.16.17`.
+Current [release](https://github.com/flowbi/pgweb/releases) is `0.16.18`.
+
+## 0.16.18 - 2025-11-23
+
+- `FIX` Simplify parameter toggle button positioning logic
+- `FIX` Update test URLs in development script
 
 ## 0.16.17 - 2025-11-23
 
