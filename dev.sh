@@ -488,7 +488,7 @@ start_development() {
     
     # Test parameter substitution URL
     echo_info "Test URL with parameters:"
-    echo_info "http://localhost:8081/?Client=client&Instance=instance&ClientName=client-name&InstanceName=instance-name&AccountId=account-id"
+    echo_info "http://localhost:8081/?Client=client-uuid&Instance=instance-uuid&ClientName=client-name&InstanceName=instance-name&AccountId=account-id"
 }
 
 # Stop development environment
@@ -532,7 +532,7 @@ test_browser() {
     echo_info "Testing parameter substitution..."
     sleep 2
     echo_info "Opening pgweb with test parameters..."
-    local test_url="http://localhost:8081/?Client=client&Instance=instance&ClientName=client-name&InstanceName=instance-name&AccountId=account-id&AccountPerspective=account-perspective&AccountDbUser=account-db-user&AccountName=account-name&AccountEmail=account-email&FolderName=folder-name&InvalidParameter=shouldnotshow"
+    local test_url="http://localhost:8081/?Client=client-uuid&Instance=instance-uuid&ClientName=client-name&InstanceName=instance-name&AccountId=account-id&AccountPerspective=account-perspective&AccountDbUser=account-db-user&AccountName=account-name&AccountEmail=account-email&FolderName=folder-name&InvalidParameter=shouldnotshow"
     open "$test_url" 2>/dev/null || echo_warning "Could not open browser automatically"
     echo_info "Test URL: $test_url"
 }
