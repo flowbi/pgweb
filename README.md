@@ -114,6 +114,39 @@ all supported PostgreSQL version with a single command:
 make test-all
 ```
 
+## CI/CD
+
+### PR Checks (`checks.yml`)
+
+On every pull request, the following checks run automatically:
+
+- **tests** — Go tests against PostgreSQL 16 on Ubuntu
+- **tests-windows** — Go tests on Windows (push to main only, skipped on PRs)
+- **lint** — golangci-lint v1.57.1
+- **fmt** — Go formatting check
+
+### Release Process (`release.yml`)
+
+Releases are triggered by pushing a version tag. The workflow builds and publishes Docker images to both Docker Hub and GitHub Container Registry.
+
+```bash
+# 1. Merge PR into main
+gh pr merge <pr-number> --repo flowbi/pgweb --merge
+
+# 2. Pull latest main
+git checkout main && git pull origin main
+
+# 3. Tag the release (match version in CHANGELOG.md)
+git tag v0.x.x
+
+# 4. Push the tag — this triggers the release workflow
+git push origin v0.x.x
+```
+
+The release workflow builds multi-platform images (`linux/amd64`, `linux/arm64`, `linux/arm/v7`) and pushes to:
+- `flowbi/pgweb:<version>` + `flowbi/pgweb:latest` on Docker Hub
+- `ghcr.io/flowbi/pgweb:<version>` + `ghcr.io/flowbi/pgweb:latest` on GHCR
+
 ## Contribute
 
 - Fork this repository
