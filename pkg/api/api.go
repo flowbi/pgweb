@@ -19,6 +19,7 @@ import (
 	"github.com/flowbi/pgweb/pkg/cache"
 	"github.com/flowbi/pgweb/pkg/client"
 	"github.com/flowbi/pgweb/pkg/command"
+	"github.com/flowbi/pgweb/pkg/connect"
 	"github.com/flowbi/pgweb/pkg/connection"
 	"github.com/flowbi/pgweb/pkg/metrics"
 	"github.com/flowbi/pgweb/pkg/queries"
@@ -118,18 +119,18 @@ func GetSessions(c *gin.Context) {
 
 // ConnectWithBackend creates a new connection based on backend resource
 func ConnectWithBackend(c *gin.Context) {
-	// Setup a new backend client
-	backend := Backend{
-		Endpoint:    command.Opts.ConnectBackend,
-		Token:       command.Opts.ConnectToken,
-		PassHeaders: strings.Split(command.Opts.ConnectHeaders, ","),
+	backend := connect.NewBackend(command.Opts.ConnectBackend, command.Opts.ConnectToken)
+	backend.SetLogger(logger)
+
+	if command.Opts.ConnectHeaders != "" {
+		backend.SetPassHeaders(strings.Split(command.Opts.ConnectHeaders, ","))
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 	defer cancel()
 
 	// Fetch connection credentials
-	cred, err := backend.FetchCredential(ctx, c.Param("resource"), c)
+	cred, err := backend.FetchCredential(ctx, c.Param("resource"), c.Request.Header)
 	if err != nil {
 		badRequest(c, err)
 		return

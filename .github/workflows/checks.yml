@@ -14,7 +14,7 @@ on:
       - "**.md"
 
 env:
-  GO_VERSION: "1.22"
+  GO_VERSION: "1.25"
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -49,7 +49,7 @@ jobs:
           sudo rm -f /etc/apt/sources.list.d/pgdg.list
           curl --silent https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo apt-key add
           echo "deb http://apt.postgresql.org/pub/repos/apt/ `lsb_release -cs`-pgdg main" | sudo tee /etc/apt/sources.list.d/pgdg.list
-          sudo apt-get update && sudo apt-get install -y postgresql-client-17
+          sudo apt-get update && sudo apt-get install -y postgresql-client-18
 
       - uses: actions/checkout@v4
         with:
@@ -98,9 +98,9 @@ jobs:
           fetch-depth: 0
 
       - name: golangci-lint
-        uses: golangci/golangci-lint-action@v6
+        uses: golangci/golangci-lint-action@v8
         with:
-          version: v1.57.1
+          version: v2.7.2
 
   fmt:
     name: fmt
