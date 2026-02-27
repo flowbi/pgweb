@@ -1,6 +1,11 @@
 ## Changelog
 
-Current [release](https://github.com/flowbi/pgweb/releases) is `0.16.18`.
+Current [release](https://github.com/flowbi/pgweb/releases) is `0.16.19`.
+
+## 0.16.19 - 2026-02-27
+
+- `FIX` Remove debug console.log statements that leak parameter/query data to browser console
+- `FIX` Remove unused `extractURLParams` backend code (substitution is handled client-side)
 
 ## 0.16.18 - 2025-11-23
 
