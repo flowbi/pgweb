@@ -1,6 +1,23 @@
 ## Changelog
 
-Current [release](https://github.com/flowbi/pgweb/releases) is `0.16.19`.
+Current [release](https://github.com/flowbi/pgweb/releases) is `2601.1.0.0`.
+
+## 2601.1.0.0 - 2026-02-27
+
+### Flow.BI
+- `NEW` Adopt hybrid versioning scheme (YYQQ.MAJOR.MINOR.PATCH)
+
+### Upstream (sosedoff/pgweb v0.17.0)
+- `NEW` Add PGWEB_BOOKMARKS_DIR environment variable
+- `NEW` Add PostgreSQL 18 compatibility
+- `FIX` Session manager race condition (TryLock to Lock)
+- `FIX` Security dependency updates (crypto, logrus)
+- `INFRA` Go 1.22 to 1.25, gin v1.9 to v1.11, Dockerfile bullseye to trixie
+- `INFRA` Connect backend refactored to pkg/connect package
+
+---
+
+## Previous Releases (0.16.x)
 
 ## 0.16.19 - 2026-02-27
 
@@ -101,18 +118,6 @@ Current [release](https://github.com/flowbi/pgweb/releases) is `0.16.19`.
 - `FIX` Update Docker repository references to flowbi/pgweb
 - `FIX` Fix typos in documentation and code
 - `FIX` Add execution time display for empty queries
-
-## Upstream 0.17.0 - 2025-11-22
-
-- `NEW` Add PGWEB_BOOKMARKS_DIR environment variable to configure bookmarks directory
-- `NEW` Update Dockerfile to use Golang 1.24 image, GH-821
-- `NEW` Bump go crypto package to 0.44.x, GH-820, GH-823
-- `NEW` Add PostgreSQL 18 support to Github Actions, GH-816
-- `NEW` Connect backend refactor, GH-801
-- `NEW` Add server settings view, GH-768
-- `NEW` Add exec time of empty queries, GH-763
-- `FIX` Minor typos, GH-764, GH-786
-- `FIX` Shorten git revision printed in the --version output, GH-770
 
 ## 0.16.2 - 2024-11-02
 
