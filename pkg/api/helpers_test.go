@@ -5,7 +5,6 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
-	"os"
 	"testing"
 
 	"github.com/gin-gonic/gin"
@@ -86,92 +85,4 @@ func Test_serveResult(t *testing.T) {
 	server.ServeHTTP(w, req)
 	assert.Equal(t, 200, w.Code)
 	assert.Equal(t, `null`, w.Body.String())
-}
-
-func TestExtractURLParamsEmpty(t *testing.T) {
-	gin.SetMode(gin.TestMode)
-
-	req, _ := http.NewRequest("GET", "/api/query", nil)
-	c := &gin.Context{Request: req}
-
-	params := extractURLParams(c)
-
-	assert.Empty(t, params)
-}
-
-func TestExtractURLParamsWithConfiguredPatterns(t *testing.T) {
-	gin.SetMode(gin.TestMode)
-
-	// Set environment variable for test
-	originalEnv := os.Getenv("PGWEB_CUSTOM_PARAMS")
-	os.Setenv("PGWEB_CUSTOM_PARAMS", "Client,Instance,AccountId")
-	defer os.Setenv("PGWEB_CUSTOM_PARAMS", originalEnv)
-
-	values := url.Values{}
-	values.Set("Client", "test-client")
-	values.Set("Instance", "test-instance")
-	values.Set("AccountId", "123")
-	values.Set("ignored_param", "should-be-ignored")
-
-	req, _ := http.NewRequest("GET", "/api/query?"+values.Encode(), nil)
-	c := &gin.Context{Request: req}
-
-	params := extractURLParams(c)
-
-	assert.Len(t, params, 3)
-	assert.Equal(t, "test-client", params["Client"])
-	assert.Equal(t, "test-instance", params["Instance"])
-	assert.Equal(t, "123", params["AccountId"])
-	assert.NotContains(t, params, "ignored_param")
-}
-
-func TestExtractURLParamsNoConfiguration(t *testing.T) {
-	gin.SetMode(gin.TestMode)
-
-	// Clear environment variable for test
-	originalEnv := os.Getenv("PGWEB_CUSTOM_PARAMS")
-	os.Setenv("PGWEB_CUSTOM_PARAMS", "")
-	defer os.Setenv("PGWEB_CUSTOM_PARAMS", originalEnv)
-
-	values := url.Values{}
-	values.Set("Client", "test-client")
-	values.Set("Instance", "test-instance")
-	values.Set("any_param", "any-value")
-
-	req, _ := http.NewRequest("GET", "/api/query?"+values.Encode(), nil)
-	c := &gin.Context{Request: req}
-
-	params := extractURLParams(c)
-
-	// Should be empty when no patterns are configured
-	assert.Empty(t, params)
-}
-
-func TestExtractURLParamsExactMatchOnly(t *testing.T) {
-	gin.SetMode(gin.TestMode)
-
-	// Set environment variable for test
-	originalEnv := os.Getenv("PGWEB_CUSTOM_PARAMS")
-	os.Setenv("PGWEB_CUSTOM_PARAMS", "Client,Instance")
-	defer os.Setenv("PGWEB_CUSTOM_PARAMS", originalEnv)
-
-	values := url.Values{}
-	values.Set("Client", "should-match")       // Exact match
-	values.Set("client", "should-not-match")   // Case sensitive - doesn't match
-	values.Set("ClientId", "should-not-match") // Partial match - doesn't match
-	values.Set("Instance", "should-match")     // Exact match
-	values.Set("tenant", "should-not-match")   // No underscore
-
-	req, _ := http.NewRequest("GET", "/api/query?"+values.Encode(), nil)
-	c := &gin.Context{Request: req}
-
-	params := extractURLParams(c)
-
-	// Should only match exact parameter names
-	assert.Len(t, params, 2)
-	assert.Equal(t, "should-match", params["Client"])
-	assert.Equal(t, "should-match", params["Instance"])
-	assert.NotContains(t, params, "client")
-	assert.NotContains(t, params, "ClientId")
-	assert.NotContains(t, params, "tenant")
 }

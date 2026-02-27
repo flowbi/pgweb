@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"mime"
 	"net/http"
-	"os"
 	"path/filepath"
 	"regexp"
 	"strconv"
@@ -188,38 +187,4 @@ func errorResponse(c *gin.Context, status int, err interface{}) {
 // Send a bad request (http 400) back to client
 func badRequest(c *gin.Context, err interface{}) {
 	errorResponse(c, 400, err)
-}
-
-// extractURLParams extracts query parameters that should be used for SQL parameter substitution
-// Returns a map of parameters that match configured patterns from PGWEB_CUSTOM_PARAMS
-func extractURLParams(c *gin.Context) map[string]string {
-	params := make(map[string]string)
-
-	// Get custom parameter patterns from environment variable
-	customParams := os.Getenv("PGWEB_CUSTOM_PARAMS")
-	if customParams == "" {
-		// No patterns configured - parameter feature disabled
-		return params
-	}
-
-	// Parse configured patterns (exact matches only)
-	configuredPatterns := strings.Split(customParams, ",")
-	for i, pattern := range configuredPatterns {
-		configuredPatterns[i] = strings.TrimSpace(pattern)
-	}
-
-	// Extract all query parameters
-	for key, values := range c.Request.URL.Query() {
-		if len(values) > 0 {
-			// Check if this parameter matches configured patterns (exact match)
-			for _, pattern := range configuredPatterns {
-				if key == pattern {
-					params[key] = values[0] // Use the first value
-					break
-				}
-			}
-		}
-	}
-
-	return params
 }

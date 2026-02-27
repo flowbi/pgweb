@@ -332,7 +332,6 @@ function loadParameterPatterns(callback) {
       });
     }
     
-    console.log("Loaded parameter patterns:", parameterPatterns.map(function(p) { return p.toString(); }));
     if (callback) callback();
   });
 }
@@ -381,12 +380,6 @@ function substituteQueryParameters(query) {
     var escapedValue = value.replace(/'/g, "''");
     result = result.replace(new RegExp('@' + param, 'g'), "'" + escapedValue + "'");
   }
-  
-  console.log('Query parameter substitution:', {
-    original: query,
-    substituted: result,
-    parameters: globalSqlParams
-  });
   
   return result;
 }
@@ -1499,8 +1492,6 @@ function displayURLParameters() {
   globalSqlParamsForOverlay = sqlParams;
 
   if (hasParams) {
-    console.log('URL parameters available for query substitution:', sqlParams);
-
     // Initialize toggle state and overlay visibility
     updateParamToggleState();
 
